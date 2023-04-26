@@ -4,5 +4,10 @@ $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 
+diagnostics.sml
 main.sml
+tokens.sml
+
+flux.lex
+
 
