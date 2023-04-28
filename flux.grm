@@ -1,0 +1,136 @@
+
+%%
+
+%name Flux
+
+%term
+      ID of string
+    | METHOD
+    | TYPE
+    | FIELD
+    | OBJECT
+    | ABSTRACT
+    | IMMUTABLE
+    | MUTABLE
+    | BUILTIN
+    | RETURN
+    | INTEGER
+    | FLOAT
+    | SEMICOLON
+    | COLON
+    | LPAREN
+    | RPAREN
+    | LBRACE
+    | RBRACE
+    | EOF
+
+%nonterm
+      program
+    | definition_list
+    | definition_list_opt
+    | definition
+    | definition_type
+    | definition_body
+    | modifier_list_opt
+    | modifier_list
+    | modifier
+    | value_parameter_list_opt
+    | value_parameter_list_inner_opt
+    | value_parameter_list
+    | value_parameter
+    | type_expr_opt
+    | type_expr
+    | statement_list_opt
+    | statement_list
+    | statement
+    | value_expr_opt
+    | value_expr
+
+%pos int
+%verbose
+%start program
+%eop EOF
+%noshift EOF
+
+%%
+
+program
+    : definition_list_opt                   ()
+
+definition_list_opt
+    :                                       ()
+    | definition_list                       ()
+
+definition_list
+    : definition                            ()
+    | definition_list definition            ()
+
+definition
+    : modifier_list_opt definition_type ID value_parameter_list_opt type_expr_opt definition_body
+                                            ()
+
+definition_type
+    : TYPE                                  ()
+    | METHOD                                ()
+    | OBJECT                                ()
+
+definition_body
+    : SEMICOLON                             ()
+    | LBRACE statement_list_opt RBRACE      ()
+
+modifier_list_opt
+    :                                       ()
+    | modifier_list                         ()
+
+modifier_list
+    : modifier                              ()
+    | modifier_list modifier                ()
+
+modifier
+    : ABSTRACT                              ()
+    | IMMUTABLE                             ()
+    | MUTABLE                               ()
+    | BUILTIN                               ()
+
+value_parameter_list_opt
+    :                                       ()
+    | LPAREN value_parameter_list_inner_opt RPAREN
+                                            ()
+
+value_parameter_list_inner_opt
+    :                                       ()
+    | value_parameter_list                  ()
+
+value_parameter_list
+    : value_parameter                       ()
+    | value_parameter_list value_parameter  ()
+
+value_parameter
+    : ID                                    ()
+
+type_expr_opt
+    :                                       ()
+    | COLON type_expr                       ()
+
+type_expr
+    : ID                                    ()
+
+statement_list_opt
+    :                                       ()
+    | statement_list                        ()
+
+statement_list
+    : statement                             ()
+    | statement_list statement              ()
+
+statement
+    : RETURN value_expr_opt SEMICOLON       ()
+
+value_expr_opt
+    :                                       ()
+    | value_expr                            ()
+
+value_expr
+    : INTEGER                               ()
+    | FLOAT                                 ()
+

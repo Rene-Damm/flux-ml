@@ -1,2 +1,6 @@
 /.cm/
+*.grm.sig
+*.grm.desc
+*.grm.sml
+*.lex.sml
 

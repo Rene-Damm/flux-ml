@@ -1,27 +1,37 @@
-type lexresult = Tokens.token
-fun eof() = Tokens.EOF
+
+structure Tokens = Tokens
+
+type pos = int
+type svalue = Tokens.svalue
+type ('a, 'b) token = ('a, 'b) Tokens.token
+type lexresult = (svalue, pos) token
+
+fun eof() = Tokens.EOF(0, 0)
 
 %%
+
+%header (functor FluxLexFun(structure Tokens: Flux_TOKENS));
 
 %s STRING;
 
 %%
 
-<INITIAL> "type"                                => (Tokens.TYPE(yypos));
-<INITIAL> "method"                              => (Tokens.METHOD(yypos));
-<INITIAL> "field"                               => (Tokens.FIELD(yypos));
-<INITIAL> "abstract"                            => (Tokens.ABSTRACT(yypos));
-<INITIAL> "immutable"                           => (Tokens.IMMUTABLE(yypos));
-<INITIAL> "mutable"                             => (Tokens.MUTABLE(yypos));
-<INITIAL> "builtin"                             => (Tokens.BUILTIN(yypos));
-<INITIAL> [A-Za-z_][A-Za-z0-9_]*                => (Tokens.ID(yytext, yypos));
+<INITIAL> "type"                                => (Tokens.TYPE(yypos, yypos + 4));
+<INITIAL> "method"                              => (Tokens.METHOD(yypos, yypos + 6));
+<INITIAL> "field"                               => (Tokens.FIELD(yypos, yypos + 5));
+<INITIAL> "object"                              => (Tokens.OBJECT(yypos, yypos + 6));
+<INITIAL> "abstract"                            => (Tokens.ABSTRACT(yypos, yypos + 8));
+<INITIAL> "immutable"                           => (Tokens.IMMUTABLE(yypos, yypos + 9));
+<INITIAL> "mutable"                             => (Tokens.MUTABLE(yypos, yypos + 7));
+<INITIAL> "builtin"                             => (Tokens.BUILTIN(yypos, yypos + 7));
+<INITIAL> [A-Za-z_][A-Za-z0-9_]*                => (Tokens.ID(yytext, yypos, yypos + size yytext));
 <INITIAL> "\""                                  => (YYBEGIN STRING; continue());
-<INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos));
-<INITIAL> ":"                                   => (Tokens.COLON(yypos));
-<INITIAL> "("                                   => (Tokens.LPAREN(yypos));
-<INITIAL> ")"                                   => (Tokens.RPAREN(yypos));
-<INITIAL> "{"                                   => (Tokens.LBRACE(yypos));
-<INITIAL> "}"                                   => (Tokens.RBRACE(yypos));
+<INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos, yypos + 1));
+<INITIAL> ":"                                   => (Tokens.COLON(yypos, yypos + 1));
+<INITIAL> "("                                   => (Tokens.LPAREN(yypos, yypos + 1));
+<INITIAL> ")"                                   => (Tokens.RPAREN(yypos, yypos + 1));
+<INITIAL> "{"                                   => (Tokens.LBRACE(yypos, yypos + 1));
+<INITIAL> "}"                                   => (Tokens.RBRACE(yypos, yypos + 1));
 <INITIAL> [ \t\r\n]+                            => (continue());
 <INITIAL> .                                     => (Diagnostics.error; continue());
 
