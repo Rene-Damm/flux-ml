@@ -14,37 +14,41 @@
     | MUTABLE
     | BUILTIN
     | RETURN
-    | INTEGER
-    | FLOAT
+    | INTEGER of int
+    | FLOAT of real
+    | STRING of string
     | SEMICOLON
     | COLON
     | LPAREN
     | RPAREN
     | LBRACE
     | RBRACE
+    | EQUAL
     | EOF
 
 %nonterm
-      program
-    | definition_list
-    | definition_list_opt
-    | definition
-    | definition_type
-    | definition_body
-    | modifier_list_opt
-    | modifier_list
-    | modifier
-    | value_parameter_list_opt
-    | value_parameter_list_inner_opt
-    | value_parameter_list
-    | value_parameter
-    | type_expr_opt
-    | type_expr
-    | statement_list_opt
-    | statement_list
-    | statement
-    | value_expr_opt
-    | value_expr
+      program                           of AST.definition list
+    | definition_list                   of AST.definition list
+    | definition_list_opt               of AST.definition list
+    | definition                        of AST.definition
+    | non_type_definition_type          of AST.definitionType
+    | type_definition_body              of AST.expression option
+    | definition_body                   of AST.expressionOrStatementBlock option
+    | modifier_list_opt                 of AST.modifier list
+    | modifier_list                     of AST.modifier list
+    | modifier                          of AST.modifier
+    | value_parameter_list_opt          of AST.definition list
+    | value_parameter_list_inner_opt    of AST.definition list
+    | value_parameter_list              of AST.definition list
+    | value_parameter                   of AST.definition
+    | type_expr_opt                     of AST.expression option
+    | type_expr                         of AST.expression
+    | statement_list_opt                of AST.statement list
+    | statement_list                    of AST.statement list
+    | statement                         of AST.statement
+    | value_expr_opt                    of AST.expression option
+    | value_expr                        of AST.expression
+	| identifier						of AST.identifier
 
 %pos int
 %verbose
@@ -52,85 +56,98 @@
 %eop EOF
 %noshift EOF
 
+%value ID ("<error>")
+%value INTEGER (0)
+%value FLOAT (0.0)
+%value STRING ("")
+
 %%
 
 program
-    : definition_list_opt                   ()
+    : definition_list_opt                   (definition_list_opt)
 
 definition_list_opt
-    :                                       ()
-    | definition_list                       ()
+    :                                       ([])
+    | definition_list                       (definition_list)
 
 definition_list
-    : definition                            ()
-    | definition_list definition            ()
+    : definition                            ([definition])
+    | definition_list definition            (definition::definition_list)
 
 definition
-    : modifier_list_opt definition_type ID value_parameter_list_opt type_expr_opt definition_body
-                                            ()
+    : modifier_list_opt TYPE identifier value_parameter_list_opt type_expr_opt type_definition_body
+                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, modifiers = modifier_list_opt, name = identifier })
+    | modifier_list_opt non_type_definition_type identifier value_parameter_list_opt type_expr_opt definition_body
+                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, modifiers = modifier_list_opt, name = identifier })
 
-definition_type
-    : TYPE                                  ()
-    | METHOD                                ()
-    | OBJECT                                ()
+non_type_definition_type
+    : METHOD                                (AST.Method)
+    | OBJECT                                (AST.Object)
+
+type_definition_body
+    : SEMICOLON                             (NONE)
+    | EQUAL type_expr SEMICOLON             (SOME type_expr)
 
 definition_body
-    : SEMICOLON                             ()
-    | LBRACE statement_list_opt RBRACE      ()
+    : SEMICOLON                             (NONE)
+    | LBRACE statement_list_opt RBRACE      (SOME (AST.Statement statement_list_opt))
+    | EQUAL value_expr SEMICOLON            (SOME (AST.Expression value_expr))
 
 modifier_list_opt
-    :                                       ()
-    | modifier_list                         ()
+    :                                       ([])
+    | modifier_list                         (modifier_list)
 
 modifier_list
-    : modifier                              ()
-    | modifier_list modifier                ()
+    : modifier                              ([modifier])
+    | modifier_list modifier                (modifier::modifier_list)
 
 modifier
-    : ABSTRACT                              ()
-    | IMMUTABLE                             ()
-    | MUTABLE                               ()
-    | BUILTIN                               ()
+    : ABSTRACT                              (AST.Abstract (ABSTRACTleft, ABSTRACTright))
+    | IMMUTABLE                             (AST.Immutable (IMMUTABLEleft, IMMUTABLEright))
+    | MUTABLE                               (AST.Mutable (MUTABLEleft, MUTABLEright))
+    | BUILTIN                               (AST.Builtin (BUILTINleft, BUILTINright))
 
 value_parameter_list_opt
-    :                                       ()
+    :                                       ([])
     | LPAREN value_parameter_list_inner_opt RPAREN
-                                            ()
+                                            (value_parameter_list_inner_opt)
 
 value_parameter_list_inner_opt
-    :                                       ()
-    | value_parameter_list                  ()
+    :                                       ([])
+    | value_parameter_list                  (value_parameter_list)
 
 value_parameter_list
-    : value_parameter                       ()
-    | value_parameter_list value_parameter  ()
+    : value_parameter                       ([value_parameter])
+    | value_parameter_list value_parameter  (value_parameter::value_parameter_list)
 
 value_parameter
-    : ID                                    ()
+    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, name = identifier })
 
 type_expr_opt
-    :                                       ()
-    | COLON type_expr                       ()
+    :                                       (NONE)
+    | COLON type_expr                       (SOME type_expr)
 
 type_expr
-    : ID                                    ()
+    : identifier                            (AST.Name identifier)
 
 statement_list_opt
-    :                                       ()
-    | statement_list                        ()
+    :                                       ([])
+    | statement_list                        (statement_list)
 
 statement_list
-    : statement                             ()
-    | statement_list statement              ()
+    : statement                             ([statement])
+    | statement_list statement              (statement::statement_list)
 
 statement
-    : RETURN value_expr_opt SEMICOLON       ()
+    : RETURN value_expr_opt SEMICOLON       (AST.Return { region = (RETURNleft, SEMICOLONright), value = value_expr_opt })
 
 value_expr_opt
-    :                                       ()
-    | value_expr                            ()
+    :                                       (NONE)
+    | value_expr                            (SOME value_expr)
 
 value_expr
-    : INTEGER                               ()
-    | FLOAT                                 ()
+    : INTEGER                               (AST.Integer { region = (INTEGERleft, INTEGERright), value = INTEGER })
+    | FLOAT                                 (AST.Float { region = (FLOATleft, FLOATright), value = FLOAT })
 
+identifier
+	: ID									(AST.Identifier { region = (IDleft, IDright), text = ID })

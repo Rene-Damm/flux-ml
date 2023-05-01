@@ -1,4 +1,7 @@
-structure Parse =
+structure Parse :
+sig
+  val parse : string -> AST.definition list
+end =
 struct
 
   structure FluxLrVals = FluxLrValsFun(structure Token = LrParser.Token)

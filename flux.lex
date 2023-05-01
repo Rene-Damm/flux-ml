@@ -32,6 +32,7 @@ fun eof() = Tokens.EOF(0, 0)
 <INITIAL> ")"                                   => (Tokens.RPAREN(yypos, yypos + 1));
 <INITIAL> "{"                                   => (Tokens.LBRACE(yypos, yypos + 1));
 <INITIAL> "}"                                   => (Tokens.RBRACE(yypos, yypos + 1));
+<INITIAL> "="                                   => (Tokens.EQUAL(yypos, yypos + 1));
 <INITIAL> [ \t\r\n]+                            => (continue());
 <INITIAL> .                                     => (Diagnostics.error; continue());
 

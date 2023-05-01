@@ -5,7 +5,7 @@ struct
     let
       val ast = Parse.parse "program.flux"
     in
-      1
+      AST.print TextIO.stdOut ast
     end
 
 end

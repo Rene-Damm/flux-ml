@@ -4,9 +4,11 @@ $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 
+ast.sml
 diagnostics.sml
 main.sml
 parse.sml
+source.sml
 
 flux.lex
 flux.grm
