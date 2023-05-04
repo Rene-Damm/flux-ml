@@ -24,6 +24,7 @@ fun eof() = Tokens.EOF(0, 0)
 <INITIAL> "immutable"                           => (Tokens.IMMUTABLE(yypos, yypos + 9));
 <INITIAL> "mutable"                             => (Tokens.MUTABLE(yypos, yypos + 7));
 <INITIAL> "builtin"                             => (Tokens.BUILTIN(yypos, yypos + 7));
+<INITIAL> [0-9]+                                => (Tokens.INTEGER(Option.valOf(Int.fromString yytext), yypos, yypos + size yytext));
 <INITIAL> [A-Za-z_][A-Za-z0-9_]*                => (Tokens.ID(yytext, yypos, yypos + size yytext));
 <INITIAL> "\""                                  => (YYBEGIN STRING; continue());
 <INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos, yypos + 1));

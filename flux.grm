@@ -32,7 +32,7 @@
     | definition_list_opt               of AST.definition list
     | definition                        of AST.definition
     | non_type_definition_type          of AST.definitionType
-    | type_definition_body              of AST.expression option
+    | type_definition_body              of AST.expressionOrStatementBlock option
     | definition_body                   of AST.expressionOrStatementBlock option
     | modifier_list_opt                 of AST.modifier list
     | modifier_list                     of AST.modifier list
@@ -48,7 +48,7 @@
     | statement                         of AST.statement
     | value_expr_opt                    of AST.expression option
     | value_expr                        of AST.expression
-	| identifier						of AST.identifier
+    | identifier                        of AST.identifier
 
 %pos int
 %verbose
@@ -76,9 +76,9 @@ definition_list
 
 definition
     : modifier_list_opt TYPE identifier value_parameter_list_opt type_expr_opt type_definition_body
-                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, modifiers = modifier_list_opt, name = identifier })
+                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
     | modifier_list_opt non_type_definition_type identifier value_parameter_list_opt type_expr_opt definition_body
-                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, modifiers = modifier_list_opt, name = identifier })
+                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, modifiers = modifier_list_opt, name = identifier, body = definition_body })
 
 non_type_definition_type
     : METHOD                                (AST.Method)
@@ -86,7 +86,7 @@ non_type_definition_type
 
 type_definition_body
     : SEMICOLON                             (NONE)
-    | EQUAL type_expr SEMICOLON             (SOME type_expr)
+    | EQUAL type_expr SEMICOLON             (SOME (AST.Expression type_expr))
 
 definition_body
     : SEMICOLON                             (NONE)
@@ -121,7 +121,7 @@ value_parameter_list
     | value_parameter_list value_parameter  (value_parameter::value_parameter_list)
 
 value_parameter
-    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, name = identifier })
+    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, name = identifier, body = NONE })
 
 type_expr_opt
     :                                       (NONE)
@@ -148,6 +148,8 @@ value_expr_opt
 value_expr
     : INTEGER                               (AST.Integer { region = (INTEGERleft, INTEGERright), value = INTEGER })
     | FLOAT                                 (AST.Float { region = (FLOATleft, FLOATright), value = FLOAT })
+    | identifier                            (AST.Name(identifier))
 
 identifier
-	: ID									(AST.Identifier { region = (IDleft, IDright), text = ID })
+    : ID                                    (AST.Identifier { region = (IDleft, IDright), text = ID })
+
