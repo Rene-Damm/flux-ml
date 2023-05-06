@@ -6,9 +6,14 @@ $/ml-yacc-lib.cm
 
 ast.sml
 diagnostics.sml
+env.sml
+function.sml
 main.sml
 parse.sml
 source.sml
+symbol.sml
+translate.sml
+types.sml
 
 flux.lex
 flux.grm

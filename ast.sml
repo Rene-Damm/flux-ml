@@ -33,6 +33,11 @@ struct
                                  name: identifier,
                                  body: expressionOrStatementBlock option }
 
+  fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, name = _, body = _ }) = d
+  fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, name = n, body = _ }) = n
+
+  fun getIdentifierText (Identifier { region = _, text = t }) = t
+
   fun print stream ast =
     let
       fun put s = TextIO.output(stream, s)
