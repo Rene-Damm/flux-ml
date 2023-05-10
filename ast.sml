@@ -30,11 +30,15 @@ struct
       Definition            of { region: Source.region,
                                  modifiers: modifier list,
                                  defType: definitionType,
+                                 typeExpr: expression option,
                                  name: identifier,
                                  body: expressionOrStatementBlock option }
 
-  fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, name = _, body = _ }) = d
-  fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, name = n, body = _ }) = n
+  fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, typeExpr = _, name = _, body = _ }) = d
+  fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, typeExpr = _, name = n, body = _ }) = n
+  fun getDefinitionModifiers (Definition { region = _, modifiers = m, defType = _, typeExpr = _, name = _, body = _ }) = m
+  fun getDefinitionTypeExpr (Definition { region = _, modifiers = _, defType = _, typeExpr = t, name = _, body = _ }) = t
+  fun getDefinitionBody (Definition { region = _, modifiers = _, defType = _, typeExpr = _, name = _, body = b }) = b
 
   fun getIdentifierText (Identifier { region = _, text = t }) = t
 
@@ -56,11 +60,14 @@ struct
         | expression (Float { region = _, value = f }) = put (Real.toString f)
         | expression (String { region = _, value = s }) = put s
 
+      fun expressionOpt (NONE) = ()
+        | expressionOpt (SOME e) = expression e
+
       fun statement (Return { region = _, value = NONE }) = put "RETURN"
         | statement (Return { region = _, value = SOME e }) = (put "RETURN{e="; expression e; put "}")
         | statement (Variable(d)) = (put "LOCAL{d="; definition d; put "}")
 
-      and exprOrStatement NONE = ()
+      and exprOrStatement (NONE) = ()
         | exprOrStatement (SOME(Expression(e))) = expression e
         | exprOrStatement (SOME(Statement(l))) =
           let
@@ -89,7 +96,7 @@ struct
         | definitionType Object = "OBJECT"
         | definitionType Local = "LOCAL"
 
-      and definition (Definition { defType = t, region = _, modifiers = m, name = n, body = b }) =
+      and definition (Definition { defType = t, region = _, modifiers = m, typeExpr = e, name = n, body = b }) =
         (put "DEF{";
          put "name=";
          id n;
@@ -97,6 +104,8 @@ struct
          put (definitionType t);
          put ",modifiers=";
          modifierList m;
+         put ",type=";
+         expressionOpt e;
          put ",body=";
          exprOrStatement b;
          put "}\n")

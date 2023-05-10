@@ -76,9 +76,9 @@ definition_list
 
 definition
     : modifier_list_opt TYPE identifier value_parameter_list_opt type_expr_opt type_definition_body
-                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
+                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
     | modifier_list_opt non_type_definition_type identifier value_parameter_list_opt type_expr_opt definition_body
-                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, modifiers = modifier_list_opt, name = identifier, body = definition_body })
+                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = definition_body })
 
 non_type_definition_type
     : METHOD                                (AST.Method)
@@ -121,7 +121,7 @@ value_parameter_list
     | value_parameter_list value_parameter  (value_parameter::value_parameter_list)
 
 value_parameter
-    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, name = identifier, body = NONE })
+    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeExpr = NONE, name = identifier, body = NONE })
 
 type_expr_opt
     :                                       (NONE)
