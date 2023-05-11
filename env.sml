@@ -26,6 +26,8 @@ struct
 
     fun printType (s, Types.DerivedType(_)) = (put "type:"; putln (Symbol.toString s))
       | printType (s, Types.RootType) = (put "type:"; putln (Symbol.toString s))
+      | printType (s, Types.UnionType(_, _)) = (put "type:"; putln (Symbol.toString s))
+      | printType (s, Types.IntersectionType(_, _)) = (put "type:"; putln (Symbol.toString s))
       | printType _ = ()
 
     fun print [] = ()

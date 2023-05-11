@@ -6,14 +6,6 @@ struct
   fun translateProgram program =
   let 
 
-    (*
-    fun typeModifiers [] = []
-      | typeModifiers (AST.Abstract(_)::rest) = Types.Abstract::(typeModifiers rest)
-      | typeModifiers (AST.Immutable(_)::rest) = Types.Immutable::(typeModifiers rest)
-      | typeModifiers (AST.Mutable(_)::rest) = Types.Mutable::(typeModifiers rest)
-      | typeModifiers (AST.Builtin(_)::rest) = typeModifiers rest
-      *)
-
     fun collectTypeDefinition (table, def) =
     let
       val name = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
@@ -44,6 +36,15 @@ struct
             case Symbol.lookup (tenv, symbol)
               of SOME t => (t, tenv)
                | NONE => genType (symbol, tenv)
+          end
+        | translateExpr (AST.Binary { region = _, operator = oper, left = left, right = right }, tenv) =
+          let
+            val (leftType, tenv1) = translateExpr (left, tenv)
+            val (rightType, tenv2) = translateExpr (right, tenv1)
+          in
+            case oper
+              of AST.AND => (Types.UnionType(leftType, rightType), tenv2)
+               | AST.OR => (Types.IntersectionType(leftType, rightType), tenv2)
           end
         | translateExpr _ = raise Argh("Invalid type expr")
 

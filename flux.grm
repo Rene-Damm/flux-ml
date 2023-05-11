@@ -24,7 +24,12 @@
     | LBRACE
     | RBRACE
     | EQUAL
+	| AND
+	| OR
     | EOF
+
+%left OR
+%left AND
 
 %nonterm
       program                           of AST.definition list
@@ -129,6 +134,8 @@ type_expr_opt
 
 type_expr
     : identifier                            (AST.Name identifier)
+	| type_expr AND type_expr				(AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.AND, left = type_expr1, right = type_expr2 })
+	| type_expr OR type_expr				(AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.OR, left = type_expr1, right = type_expr2 })
 
 statement_list_opt
     :                                       ([])

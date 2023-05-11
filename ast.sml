@@ -10,11 +10,14 @@ struct
   datatype identifier =
       Identifier            of { region: Source.region, text: string }
 
+  datatype operator = AND | OR
+
   datatype expression =
       Name                  of identifier
     | Integer               of { region: Source.region, value: int }
     | Float                 of { region: Source.region, value: real }
     | String                of { region: Source.region, value: string }
+    | Binary                of { region: Source.region, operator: operator, left: expression, right: expression }
 
   datatype statement =
       Return                of { region: Source.region, value: expression option }
@@ -55,10 +58,14 @@ struct
 
       fun id (Identifier { region = _, text = t }) = put t
 
+      fun operator AND = put "AND"
+        | operator OR = put "OR"
+
       fun expression (Name(n)) = id n
         | expression (Integer { region = _, value = i }) = put (Int.toString i)
         | expression (Float { region = _, value = f }) = put (Real.toString f)
         | expression (String { region = _, value = s }) = put s
+        | expression (Binary { region = _, operator = oper, left = l, right = r }) = (put "BINARY{o="; operator oper; put ",l="; expression l; put ",r="; expression r; put "}")
 
       fun expressionOpt (NONE) = ()
         | expressionOpt (SOME e) = expression e
