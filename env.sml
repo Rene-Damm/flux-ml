@@ -2,9 +2,10 @@ signature ENV =
 sig
 
   val builtinObject : Symbol.symbol
+  val builtinNothing : Symbol.symbol
 
   type typeTable = Types.ty Symbol.table
-  type functionTable = Function.fu Symbol.table
+  type functionTable = Functions.fu Symbol.table
 
   val dumpTypes : typeTable * TextIO.outstream -> unit
   val dumpFunctions : functionTable * TextIO.outstream -> unit
@@ -15,9 +16,10 @@ structure Env : ENV =
 struct
 
   type typeTable = Types.ty Symbol.table
-  type functionTable = Function.fu Symbol.table
+  type functionTable = Functions.fu Symbol.table
 
   val builtinObject = Symbol.create "Object"
+  val builtinNothing = Symbol.create "Nothing"
 
   fun dumpTypes(table: typeTable, stream) =
   let

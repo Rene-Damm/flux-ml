@@ -33,15 +33,19 @@ struct
       Definition            of { region: Source.region,
                                  modifiers: modifier list,
                                  defType: definitionType,
+                                 typeParameters: definition list,
+                                 valueParameters: definition list,
                                  typeExpr: expression option,
                                  name: identifier,
                                  body: expressionOrStatementBlock option }
 
-  fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, typeExpr = _, name = _, body = _ }) = d
-  fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, typeExpr = _, name = n, body = _ }) = n
-  fun getDefinitionModifiers (Definition { region = _, modifiers = m, defType = _, typeExpr = _, name = _, body = _ }) = m
-  fun getDefinitionTypeExpr (Definition { region = _, modifiers = _, defType = _, typeExpr = t, name = _, body = _ }) = t
-  fun getDefinitionBody (Definition { region = _, modifiers = _, defType = _, typeExpr = _, name = _, body = b }) = b
+  fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = _ }) = d
+  fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = n, body = _ }) = n
+  fun getDefinitionModifiers (Definition { region = _, modifiers = m, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = _ }) = m
+  fun getDefinitionTypeExpr (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = t, name = _, body = _ }) = t
+  fun getDefinitionTypeParameters (Definition { region = _, modifiers = _, defType = _, typeParameters = t, valueParameters = _, typeExpr = _, name = _, body = _ }) = t
+  fun getDefinitionValueParameters (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = v, typeExpr = _, name = _, body = _ }) = v
+  fun getDefinitionBody (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = b }) = b
 
   fun getIdentifierText (Identifier { region = _, text = t }) = t
 
@@ -103,7 +107,7 @@ struct
         | definitionType Object = "OBJECT"
         | definitionType Local = "LOCAL"
 
-      and definition (Definition { defType = t, region = _, modifiers = m, typeExpr = e, name = n, body = b }) =
+      and definition (Definition { defType = t, region = _, modifiers = m, typeParameters = tp, valueParameters = vp, typeExpr = e, name = n, body = b }) =
         (put "DEF{";
          put "name=";
          id n;
@@ -113,11 +117,15 @@ struct
          modifierList m;
          put ",type=";
          expressionOpt e;
+         put ",typeParms=";
+         definitionList tp;
+         put ",valueParms=";
+         definitionList vp;
          put ",body=";
          exprOrStatement b;
          put "}\n")
 
-      fun definitionList [] = ()
+      and definitionList [] = ()
         | definitionList (d::rest) = (definitionList rest; indent (); definition d)
 
       fun program defList =

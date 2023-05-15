@@ -23,6 +23,8 @@
     | RPAREN
     | LBRACE
     | RBRACE
+	| LANGLE
+	| RANGLE
     | EQUAL
 	| AND
 	| OR
@@ -42,6 +44,10 @@
     | modifier_list_opt                 of AST.modifier list
     | modifier_list                     of AST.modifier list
     | modifier                          of AST.modifier
+    | type_parameter_list_opt           of AST.definition list
+    | type_parameter_list_inner_opt     of AST.definition list
+    | type_parameter_list               of AST.definition list
+    | type_parameter                    of AST.definition
     | value_parameter_list_opt          of AST.definition list
     | value_parameter_list_inner_opt    of AST.definition list
     | value_parameter_list              of AST.definition list
@@ -80,10 +86,10 @@ definition_list
     | definition_list definition            (definition::definition_list)
 
 definition
-    : modifier_list_opt TYPE identifier value_parameter_list_opt type_expr_opt type_definition_body
-                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
-    | modifier_list_opt non_type_definition_type identifier value_parameter_list_opt type_expr_opt definition_body
-                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = definition_body })
+    : modifier_list_opt TYPE identifier type_parameter_list_opt value_parameter_list_opt type_expr_opt type_definition_body
+                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
+    | modifier_list_opt non_type_definition_type identifier type_parameter_list_opt value_parameter_list_opt type_expr_opt definition_body
+                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = definition_body })
 
 non_type_definition_type
     : METHOD                                (AST.Method)
@@ -112,6 +118,23 @@ modifier
     | MUTABLE                               (AST.Mutable (MUTABLEleft, MUTABLEright))
     | BUILTIN                               (AST.Builtin (BUILTINleft, BUILTINright))
 
+type_parameter_list_opt
+    :                                       ([])
+    | LANGLE type_parameter_list_inner_opt RANGLE
+                                            (type_parameter_list_inner_opt)
+
+type_parameter_list_inner_opt
+    :                                       ([])
+    | type_parameter_list                   (type_parameter_list)
+
+type_parameter_list
+    : type_parameter                       ([type_parameter])
+    | type_parameter_list type_parameter   (type_parameter::type_parameter_list)
+
+type_parameter
+    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = NONE, name = identifier, body = NONE })
+
+
 value_parameter_list_opt
     :                                       ([])
     | LPAREN value_parameter_list_inner_opt RPAREN
@@ -126,7 +149,7 @@ value_parameter_list
     | value_parameter_list value_parameter  (value_parameter::value_parameter_list)
 
 value_parameter
-    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeExpr = NONE, name = identifier, body = NONE })
+    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = NONE, name = identifier, body = NONE })
 
 type_expr_opt
     :                                       (NONE)
