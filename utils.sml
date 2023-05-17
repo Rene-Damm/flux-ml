@@ -2,6 +2,7 @@ structure Utils =
 struct
 
   exception ShouldNotGetHere
+  exception NotImplemented
 
   fun writeToFile (filename, writeFn) =
   let

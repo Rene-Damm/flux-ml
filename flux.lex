@@ -8,6 +8,9 @@ type lexresult = (svalue, pos) token
 
 fun eof() = Tokens.EOF(0, 0)
 
+val strValue = ref ""
+val strStartPos = ref 0
+
 %%
 
 %header (functor FluxLexFun(structure Tokens: Flux_TOKENS));
@@ -26,7 +29,6 @@ fun eof() = Tokens.EOF(0, 0)
 <INITIAL> "builtin"                             => (Tokens.BUILTIN(yypos, yypos + 7));
 <INITIAL> [0-9]+                                => (Tokens.INTEGER(Option.valOf(Int.fromString yytext), yypos, yypos + size yytext));
 <INITIAL> [A-Za-z_][A-Za-z0-9_]*                => (Tokens.ID(yytext, yypos, yypos + size yytext));
-<INITIAL> "\""                                  => (YYBEGIN STRING; continue());
 <INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos, yypos + 1));
 <INITIAL> ":"                                   => (Tokens.COLON(yypos, yypos + 1));
 <INITIAL> "("                                   => (Tokens.LPAREN(yypos, yypos + 1));
@@ -41,5 +43,7 @@ fun eof() = Tokens.EOF(0, 0)
 <INITIAL> [ \t\r\n]+                            => (continue());
 <INITIAL> .                                     => (Diagnostics.error; continue());
 
-<STRING> "\""                                   => (YYBEGIN INITIAL; continue());
+<INITIAL> "\""                                  => (YYBEGIN STRING; strValue := ""; strStartPos := yypos; continue());
+<STRING> "\""                                   => (YYBEGIN INITIAL; Tokens.STRING(!strValue, !strStartPos, yypos + 1));
+<STRING> [^"]+                                  => (strValue := !strValue ^ yytext; continue());
 

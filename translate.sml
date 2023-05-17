@@ -93,7 +93,6 @@ struct
     end
 
     (**********************************************************************************************)
-    (****should this also just collect ASTs only?*)
     fun collectMethod (fenv, tenv, def) =
     let
       val name = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
@@ -129,8 +128,8 @@ struct
 
     in
       case Symbol.lookup (fenv, name)
-        of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, ())))
-         | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, ())))
+        of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, def)))
+         | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, def)))
     end
 
     (**********************************************************************************************)
@@ -149,11 +148,65 @@ struct
     val typeDefs = collectTypeDefinitions (Symbol.emptyTable, program)
     val tenv = generateTypes typeDefs
 
+    fun lookupBuiltinType name =
+      case Symbol.lookup (tenv, name)
+        of SOME t => t
+         | NONE => raise Argh("builtin type not found")
+
+    val intType = lookupBuiltinType Env.builtinInteger
+    val floatType = lookupBuiltinType Env.builtinFloat
+    val stringType = lookupBuiltinType Env.builtinString
+    val nothingType = lookupBuiltinType Env.builtinNothing
+
+    (* Collect all functions and arrange the methods in them into dispatch trees. *)
     val fenv = collectFunctions (Symbol.emptyTable, tenv, program)
+
+    (**********************************************************************************************)
+    fun translateExpr (AST.Integer { region = _, value = v }) = intType
+      | translateExpr (AST.Float { region = _, value = v }) = floatType
+      | translateExpr (AST.String { region = _, value = v }) = stringType
+      | translateExpr _ = nothingType
+
+    (**********************************************************************************************)
+    fun translateStmt resultType (AST.Return { region = _, value = v }) =
+          let
+            val ty = case v
+                       of SOME e => translateExpr e
+                        | NONE => nothingType
+          in
+            if not (Types.isSubtype (ty, resultType)) then raise Argh("Incorrect return type") else ()
+          end
+      | translateStmt _ _ = ()
+
+    (**********************************************************************************************)
+    fun translateFunction (_, (name, dispatchTree)) =
+      let
+        fun processNode (Functions.DispatchNode { methodType = methodType, children = children, method = method }) =
+          Functions.DispatchNode {
+            methodType = methodType,
+            children = processChildren children,
+            method =
+              case (AST.getDefinitionBody method)
+                of SOME (AST.Expression(e)) => raise Utils.NotImplemented
+                 | SOME (AST.Statement(l)) => app (translateStmt (Types.getRightOperandType methodType)) l
+                 | _ => ()
+          }
+
+        and processChildren [] = []
+          | processChildren (child::rest) = (processNode child::processChildren rest)
+      in
+        (name, processNode dispatchTree)
+      end
+
+    (**********************************************************************************************)
+    fun translateFunctions ([], fenv) = fenv
+      | translateFunctions ((name, dispatchTree)::rest, fenv) = Symbol.enter (fenv, name, translateFunction (name, dispatchTree))
+
+    val fenv_ = translateFunctions (Symbol.all fenv, Symbol.emptyTable)
 
   in
     Env.dumpTypes (tenv, TextIO.stdOut);
-    Env.dumpFunctions (fenv, TextIO.stdOut)
+    Env.dumpFunctions (fenv_, TextIO.stdOut)
   end
 
 end

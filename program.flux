@@ -2,6 +2,7 @@
 abstract type Object;
 immutable type Integer;
 immutable type Float;
+abstract type String;
 
 object True;
 object False;

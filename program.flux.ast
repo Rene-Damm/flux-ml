@@ -2,6 +2,7 @@
   DEF{name=Object,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,body=}
   DEF{name=Integer,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
   DEF{name=Float,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
+  DEF{name=String,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,body=}
   DEF{name=True,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
   DEF{name=False,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
   DEF{name=Nothing,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
