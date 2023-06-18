@@ -7,11 +7,15 @@ $/ml-yacc-lib.cm
 ast.sml
 diagnostics.sml
 env.sml
+frame.sig
+frame.x64.sml
 functions.sml
 main.sml
 parse.sml
 source.sml
 symbol.sml
+temp.sig
+temp.sml
 translate.sml
 types.sml
 utils.sml

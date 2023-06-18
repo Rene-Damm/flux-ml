@@ -1,10 +1,14 @@
 structure Translate =
 struct
 
+  (* refer to 'levels' as 'scopes' instead *)
+
   exception Argh of string
 
   fun translateProgram program =
   let 
+
+    fun createDefinitionSymbol def = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
 
     (**********************************************************************************************)
     fun translateTypeExpr_ lookupSymbolFn (AST.Name(id), tenv) =
@@ -29,7 +33,7 @@ struct
     (**********************************************************************************************)
     fun collectTypeDefinition (table, def) =
     let
-      val name = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
+      val name = createDefinitionSymbol def
     in
       case Symbol.lookup (table, name)
         of SOME _ => raise Argh("already defined") (****TODO: error, already defined *)
@@ -95,7 +99,7 @@ struct
     (**********************************************************************************************)
     fun collectMethod (fenv, tenv, def) =
     let
-      val name = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
+      val name = createDefinitionSymbol def
       val nothingType = Option.valOf (Symbol.lookup (tenv, Env.builtinNothing))
 
       val valueParms = AST.getDefinitionValueParameters def
@@ -182,15 +186,48 @@ struct
     fun translateFunction (_, (name, dispatchTree)) =
       let
         fun processNode (Functions.DispatchNode { methodType = methodType, children = children, method = method }) =
-          Functions.DispatchNode {
-            methodType = methodType,
-            children = processChildren children,
-            method =
-              case (AST.getDefinitionBody method)
-                of SOME (AST.Expression(e)) => raise Utils.NotImplemented
-                 | SOME (AST.Statement(l)) => app (translateStmt (Types.getRightOperandType methodType)) l
-                 | _ => ()
-          }
+          let 
+
+            (* There are no global values so every method gets a fresh value environment. *)
+            (*TODO: put predefined values like `argument` in the env *)
+            val venvInitial = Symbol.emptyTable
+
+            fun getArgFormat (Types.DerivedType (name, _)) =
+                  if Symbol.isSame (name, Env.builtinInteger) then Frame.Int32
+                  else if Symbol.isSame (name, Env.builtinFloat) then Frame.Float32
+                  else Frame.Address
+              | getArgFormat _ = Frame.Address
+
+            fun getArgFormats (Types.TupleType (left, right)) = (getArgFormat left)::(getArgFormats right)
+              | getArgFormats t = [getArgFormat t]
+
+            val argFormats = getArgFormats (Types.getLeftOperandType methodType)
+
+            fun processValueArgs ([], venv) = ([], venv)
+              | processValueArgs (argDef::rest, venv) =
+                let
+                  val argName = createDefinitionSymbol argDef
+                  val venv' = Symbol.enter (venv, argName, ())
+                in
+                  processValueArgs (rest, venv')
+                end
+
+            val venv' = processValueArgs ((AST.getDefinitionValueParameters method), venvInitial)
+
+            val label = Temp.newNamedLabel (Symbol.toString name)
+            val frame = Frame.newFrame (label, argFormats)
+
+          in
+            Functions.DispatchNode {
+              methodType = methodType,
+              children = processChildren children,
+              method =
+                case (AST.getDefinitionBody method)
+                  of SOME (AST.Expression(e)) => raise Utils.NotImplemented
+                   | SOME (AST.Statement(l)) => app (translateStmt (Types.getRightOperandType methodType)) l
+                   | _ => ()
+            }
+          end
 
         and processChildren [] = []
           | processChildren (child::rest) = (processNode child::processChildren rest)
