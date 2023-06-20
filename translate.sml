@@ -41,6 +41,7 @@ struct
     end
 
     (**********************************************************************************************)
+    (* First pass just puts type *definitions* in a table, i.e. the definition ASTs themselves. *)
     fun collectTypeDefinitions (table, []) = table
       | collectTypeDefinitions (table, definition::rest) =
         let
@@ -53,6 +54,8 @@ struct
         end
 
     (**********************************************************************************************)
+    (* Second pass generates types for all definitions (and their respective expressions) that have been gathered.
+     * This way we can handle even type aliases easily. *)
     fun generateTypes defTable =
     let
 
@@ -130,10 +133,12 @@ struct
 
       val methodType = Types.MethodType (argType, resultType)
 
+      val label = Temp.newNamedLabel (Symbol.toString name)
+
     in
       case Symbol.lookup (fenv, name)
-        of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, def)))
-         | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, def)))
+        of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, label, def)))
+         | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, label, def)))
     end
 
     (**********************************************************************************************)
@@ -185,7 +190,7 @@ struct
     (**********************************************************************************************)
     fun translateFunction (_, (name, dispatchTree)) =
       let
-        fun processNode (Functions.DispatchNode { methodType = methodType, children = children, method = method }) =
+        fun processNode (Functions.DispatchNode { methodType = methodType, children = children, label = label, method = method }) =
           let 
 
             (* There are no global values so every method gets a fresh value environment. *)
@@ -221,6 +226,7 @@ struct
             Functions.DispatchNode {
               methodType = methodType,
               children = processChildren children,
+              label = label,
               method =
                 case (AST.getDefinitionBody method)
                   of SOME (AST.Expression(e)) => raise Utils.NotImplemented

@@ -17,6 +17,7 @@ symbol.sml
 temp.sig
 temp.sml
 translate.sml
+tree.sml
 types.sml
 utils.sml
 
