@@ -4,11 +4,11 @@ $/basis.cm
 $/smlnj-lib.cm
 $/ml-yacc-lib.cm
 
+arch.sig
+arch.x64.sml
 ast.sml
 diagnostics.sml
 env.sml
-frame.sig
-frame.x64.sml
 functions.sml
 main.sml
 parse.sml

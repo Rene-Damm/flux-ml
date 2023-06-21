@@ -6,7 +6,7 @@ struct
   exception Argh of string
 
   datatype fragment =
-      PROC of { label: Temp.label, body: Tree.stmt, epiloque: Temp.label, returnValue: Temp.label option, frame: Frame.frame }
+      PROC of { label: Temp.label, body: Tree.stmt, epiloque: Temp.label, returnValue: Temp.label option, frame: Arch.frame }
     | STRING of Temp.label * string
 
   (* Translates a *SINGLE* AST into a list of fragments.
@@ -220,10 +220,10 @@ struct
             val venvInitial = Symbol.emptyTable
 
             fun getArgFormat (Types.DerivedType (name, _)) =
-                  if Symbol.isSame (name, Env.builtinInteger) then Frame.Int32
-                  else if Symbol.isSame (name, Env.builtinFloat) then Frame.Float32
-                  else Frame.Address
-              | getArgFormat _ = Frame.Address
+                  if Symbol.isSame (name, Env.builtinInteger) then Arch.Int32
+                  else if Symbol.isSame (name, Env.builtinFloat) then Arch.Float32
+                  else Arch.Address
+              | getArgFormat _ = Arch.Address
 
             fun getArgFormats (Types.TupleType (left, right)) = (getArgFormat left)::(getArgFormats right)
               | getArgFormats t = [getArgFormat t]
@@ -242,7 +242,7 @@ struct
             val venv' = processValueArgs ((AST.getDefinitionValueParameters method), venvInitial)
 
             val label = Temp.newNamedLabel (Symbol.toString name)
-            val frame = Frame.newFrame (label, argFormats)
+            val frame = Arch.newFrame (label, argFormats)
 
             val body =
               case (AST.getDefinitionBody method)

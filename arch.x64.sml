@@ -1,4 +1,4 @@
-structure X64Frame : FRAME =
+structure X64Arch : ARCH =
 struct
 
   datatype format = Int8 | Int16 | Int32 | Int64 | Float32 | Float64 | Address
@@ -55,7 +55,7 @@ struct
 
 end
 
-structure Frame : FRAME = X64Frame
+structure Arch : ARCH = X64Arch
 
 (* how do iterators work with stack frames? *)
 (* how do closures work with stack frames? *)
