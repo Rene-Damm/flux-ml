@@ -1,3 +1,4 @@
+(*TODO* rename FRAME to ARCH *)
 signature FRAME =
 sig
 

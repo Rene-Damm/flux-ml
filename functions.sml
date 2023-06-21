@@ -6,6 +6,7 @@ struct
   datatype 'a dispatchNode =
       DispatchNode of { methodType: Types.ty,
                         children: 'a dispatchNode list,
+                        (*TODO: add separate label for body*)
                         label: Temp.label,
                         method: 'a }
 

@@ -5,6 +5,12 @@ struct
 
   exception Argh of string
 
+  datatype fragment =
+      PROC of { label: Temp.label, body: Tree.stmt, epiloque: Temp.label, returnValue: Temp.label option, frame: Frame.frame }
+    | STRING of Temp.label * string
+
+  (* Translates a *SINGLE* AST into a list of fragments.
+   * No support for translating a program with multiple units. *)
   fun translateProgram program =
   let 
 
@@ -171,27 +177,43 @@ struct
     val fenv = collectFunctions (Symbol.emptyTable, tenv, program)
 
     (**********************************************************************************************)
-    fun translateExpr (AST.Integer { region = _, value = v }) = intType
-      | translateExpr (AST.Float { region = _, value = v }) = floatType
-      | translateExpr (AST.String { region = _, value = v }) = stringType
-      | translateExpr _ = nothingType
-
-    (**********************************************************************************************)
-    fun translateStmt resultType (AST.Return { region = _, value = v }) =
-          let
-            val ty = case v
-                       of SOME e => translateExpr e
-                        | NONE => nothingType
-          in
-            if not (Types.isSubtype (ty, resultType)) then raise Argh("Incorrect return type") else ()
-          end
-      | translateStmt _ _ = ()
-
-    (**********************************************************************************************)
     fun translateFunction (_, (name, dispatchTree)) =
       let
+
         fun processNode (Functions.DispatchNode { methodType = methodType, children = children, label = label, method = method }) =
           let 
+
+            val methodResultType = (Types.getRightOperandType methodType)
+            val hasReturnValue = not (Types.isSubtype (methodResultType, nothingType))
+
+            val epiloqueLabel = Temp.newNamedLabel ((Symbol.toString name) ^ "_epilogue")
+            val returnValueLabel = Temp.newTemp ()
+
+            (* Translates an AST.expression into a tree and returns that and the Types.ty of the expression. *)
+            fun translateExpr (AST.Integer { region = _, value = v }) = (Tree.INT v, intType)
+              | translateExpr (AST.Float { region = _, value = v }) = (Tree.FLOAT v, floatType)
+              (*| translateExpr (AST.String { region = _, value = v }) = stringType*) (*TODO: strings*)
+              | translateExpr _ = raise Utils.NotImplemented
+
+            fun translateStmt (AST.Return { region = _, value = v }) =
+                  let
+                    val (exp, ty) = case v
+                                      of SOME e => let val (e, t) = translateExpr e in (SOME e, t) end
+                                       | NONE => (NONE, nothingType)
+                  in
+                    if not (Types.isSubtype (ty, methodResultType))
+                    then raise Argh ("Incorrect return type")
+                    else
+                      case exp
+                        of SOME e => Tree.SEQ (Tree.MOVE (Tree.TEMP returnValueLabel, e), Tree.JUMP epiloqueLabel)
+                         | NONE => Tree.JUMP epiloqueLabel
+                  end
+              | translateStmt _ = raise Utils.NotImplemented
+
+            fun translateStmts [] = raise Utils.ShouldNotGetHere
+              | translateStmts (stmt::[]) = translateStmt stmt
+              (*TODO: this should unfold nested SEQs*)
+              | translateStmts (stmt::rest) = Tree.SEQ (translateStmt stmt, translateStmts rest)
 
             (* There are no global values so every method gets a fresh value environment. *)
             (*TODO: put predefined values like `argument` in the env *)
@@ -222,34 +244,24 @@ struct
             val label = Temp.newNamedLabel (Symbol.toString name)
             val frame = Frame.newFrame (label, argFormats)
 
+            val body =
+              case (AST.getDefinitionBody method)
+                of SOME (AST.Expression(e)) => raise Utils.NotImplemented
+                 | SOME (AST.Statement(l)) => translateStmts l
+                 | _ => Tree.NOP
+
           in
-            Functions.DispatchNode {
-              methodType = methodType,
-              children = processChildren children,
-              label = label,
-              method =
-                case (AST.getDefinitionBody method)
-                  of SOME (AST.Expression(e)) => raise Utils.NotImplemented
-                   | SOME (AST.Statement(l)) => app (translateStmt (Types.getRightOperandType methodType)) l
-                   | _ => ()
-            }
+            PROC { label = label, body = body, frame = frame, epiloque = epiloqueLabel, returnValue = if hasReturnValue then SOME returnValueLabel else NONE }::(List.concat (map processNode children))
           end
-
-        and processChildren [] = []
-          | processChildren (child::rest) = (processNode child::processChildren rest)
       in
-        (name, processNode dispatchTree)
+        processNode dispatchTree
       end
-
-    (**********************************************************************************************)
-    fun translateFunctions ([], fenv) = fenv
-      | translateFunctions ((name, dispatchTree)::rest, fenv) = Symbol.enter (fenv, name, translateFunction (name, dispatchTree))
-
-    val fenv_ = translateFunctions (Symbol.all fenv, Symbol.emptyTable)
 
   in
     Env.dumpTypes (tenv, TextIO.stdOut);
-    Env.dumpFunctions (fenv_, TextIO.stdOut)
+    Env.dumpFunctions (fenv, TextIO.stdOut);
+
+    List.concat (map translateFunction (Symbol.all fenv))
   end
 
 end
