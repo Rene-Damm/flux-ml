@@ -32,11 +32,7 @@ struct
     fun put s = TextIO.output(stream, s)
     fun putln s = (put s; put "\n")
 
-    fun printType (s, Types.DerivedType(_)) = (put "type:"; putln (Symbol.toString s))
-      | printType (s, Types.RootType) = (put "type:"; putln (Symbol.toString s))
-      | printType (s, Types.UnionType(_, _)) = (put "type:"; putln (Symbol.toString s))
-      | printType (s, Types.IntersectionType(_, _)) = (put "type:"; putln (Symbol.toString s))
-      | printType _ = ()
+    fun printType (s, t) = (put "type:"; putln (Types.toString t))
 
     fun print [] = ()
       | print (t::rest) = (printType t; print rest)

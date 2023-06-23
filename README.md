@@ -130,11 +130,3 @@ invariant method ListCanNeverContain12( List< Integer > ) : Boolean
 - Does not support modules.
 - In fact, does not support more than a single compilation unit.
 
-## Revisiting SML
-
-My last encounter with SML was years ago. Back then, I had a spell where I was really into it and doing it exclusively. Coming back, I can see why I walked away from it. It definitely does have its strong points but:
-
-* `[tycon mismatch]`. Type inference just sucks. It's not an improvement. During programming, you will constantly try to decipher where something went wrong and often be led through a complex machinery of functions just to retrace where the compiler came to a different conclusion than you did. You can fight this by more rigidly using explicit type annotations but ...TODO Additionally, program code not containing types is just so much harder to understand. The more you pack into context, the less you know just be reading code. And without understand what data is being operated on, you're left guessing and, well, inferring.
-* Small changes can lead to massive breakage. Simply adding a field to a record can break code all over the project. The only way around that is to hide .
-
-

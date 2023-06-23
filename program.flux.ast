@@ -1,14 +1,25 @@
 [
-  DEF{name=Object,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,body=}
-  DEF{name=Integer,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
-  DEF{name=Float,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
-  DEF{name=String,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,body=}
-  DEF{name=True,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
-  DEF{name=False,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
-  DEF{name=Nothing,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
-  DEF{name=Boolean,defType=TYPE,modifiers=,type=,typeParms=,valueParms=,body=BINARY{o=OR,l=True,r=False}}
-  DEF{name=Optional,defType=TYPE,modifiers=,type=,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
-,valueParms=,body=BINARY{o=OR,l=Object,r=Nothing}}
   DEF{name=First,defType=METHOD,modifiers=,type=Integer,typeParms=,valueParms=  DEF{name=Float,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
 ,body=[RETURN{e=123}]}
+  DEF{name=Count,defType=METHOD,modifiers=ABSTRACT,type=Integer,typeParms=,valueParms=  DEF{name=FiniteCollection,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+,body=}
+  DEF{name=MutableString,defType=TYPE,modifiers=ABSTRACT,type=String,typeParms=,valueParms=,body=}
+  DEF{name=ImmutableString,defType=TYPE,modifiers=ABSTRACT,type=String,typeParms=,valueParms=,body=}
+  DEF{name=String,defType=TYPE,modifiers=ABSTRACT,type=BINARY{o=AND,l=Sequence,r=FiniteCollection},typeParms=,valueParms=,body=}
+  DEF{name=Sequence,defType=TYPE,modifiers=ABSTRACT,type=Collection,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+,valueParms=,body=}
+  DEF{name=FiniteCollection,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+,valueParms=,body=}
+  DEF{name=Collection,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+,valueParms=,body=}
+  DEF{name=Optional,defType=TYPE,modifiers=,type=,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+,valueParms=,body=BINARY{o=OR,l=Object,r=Nothing}}
+  DEF{name=Nothing,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
+  DEF{name=Boolean,defType=TYPE,modifiers=,type=,typeParms=,valueParms=,body=BINARY{o=OR,l=True,r=False}}
+  DEF{name=False,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
+  DEF{name=True,defType=OBJECT,modifiers=,type=,typeParms=,valueParms=,body=}
+  DEF{name=Character,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
+  DEF{name=Float,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
+  DEF{name=Integer,defType=TYPE,modifiers=IMMUTABLE,type=,typeParms=,valueParms=,body=}
+  DEF{name=Object,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,body=}
 ]

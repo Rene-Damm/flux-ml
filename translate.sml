@@ -38,13 +38,13 @@ struct
     
     (**********************************************************************************************)
     fun collectTypeDefinition (table, def) =
-    let
-      val name = createDefinitionSymbol def
-    in
-      case Symbol.lookup (table, name)
-        of SOME _ => raise Argh("already defined") (****TODO: error, already defined *)
-         | NONE => Symbol.enter (table, name, def)
-    end
+      let
+        val name = createDefinitionSymbol def
+      in
+        case Symbol.lookup (table, name)
+          of SOME _ => raise Argh("already defined") (****TODO: error, already defined *)
+           | NONE => Symbol.enter (table, name, def)
+      end
 
     (**********************************************************************************************)
     (* First pass just puts type *definitions* in a table, i.e. the definition ASTs themselves. *)
@@ -63,89 +63,129 @@ struct
     (* Second pass generates types for all definitions (and their respective expressions) that have been gathered.
      * This way we can handle even type aliases easily. *)
     fun generateTypes defTable =
-    let
-
-      fun translateExpr (exp, tenv)  = translateTypeExpr_ (fn (tenv_, symbol) =>
-            case Symbol.lookup (tenv_, symbol)
-              of SOME t => (t, tenv_)
-               | NONE => genType (symbol, tenv_)) (exp, tenv)
-
-      and genType (symbol, tenv) =
       let
-        val definition = Option.valOf (Symbol.lookup (defTable, symbol))
-        val body = AST.getDefinitionBody definition
-        val typeExpr = AST.getDefinitionTypeExpr definition
 
-        fun genDerivedType (expr) = let val (baseType, newTenv) = translateExpr (expr, tenv)
-                                    in (Types.DerivedType(symbol, baseType), newTenv) end
-        fun genTypeDerivedFromObject () = let val (objType, tenv_) = genType (Env.builtinObject, tenv)
-                                          in (Types.DerivedType(symbol, objType), tenv_) end
+        fun createTupleType func tenv (v::[]) = func (v, tenv)
+          | createTupleType func tenv (v::rest) =
+              let
+                val (left, tenv') = func (v, tenv)
+                val (right, tenv'') = createTupleType func tenv' rest
+              in
+                (Types.TupleType (left, right), tenv'')
+              end
+          | createTupleType _ _ [] = raise Utils.ShouldNotGetHere
 
-        val (ty, newTenv) = case (body, typeExpr)
-                              of (SOME (AST.Expression(e)), NONE) => translateExpr (e, tenv) (* alias type *)
-                               | (NONE, SOME e) => genDerivedType e
-                               | (NONE, NONE) => if Symbol.isSame (symbol, Env.builtinObject)
-                                                 then (Types.RootType, tenv)
-                                                 else genTypeDerivedFromObject ()
-                               | _ => raise Argh("invalid type definition")
+        fun translateExpr (exp, tenv) = translateTypeExpr_ (fn (tenv_, symbol) =>
+              case Symbol.lookup (tenv_, symbol)
+                of SOME t => (t, tenv_)
+                 | NONE => genType (symbol, tenv_)) (exp, tenv)
+
+        and genTypeForTypeParameter (argDef, tenv) =
+          let
+            val name = createDefinitionSymbol argDef
+          in
+            case AST.getDefinitionTypeExpr argDef
+              of NONE => (case Symbol.lookup (tenv, name)
+                            of SOME t => (Types.VariableType (name, t), tenv)
+                             | NONE =>
+                                let
+                                  val (t, tenv') = genType (name, tenv)
+                                in
+                                  (Types.VariableType (name, t), tenv')
+                                end)
+               | SOME e =>
+                  let
+                    val (t, tenv') = translateExpr (e, tenv)
+                  in
+                    (Types.VariableType (name, t), tenv')
+                  end
+          end
+
+        and genType (symbol, tenv) =
+          let
+            val definition = Option.valOf (Symbol.lookup (defTable, symbol))
+            val body = AST.getDefinitionBody definition
+            val typeExpr = AST.getDefinitionTypeExpr definition
+
+            (*FIXME: we don't want type parameters to leak out beyond just the function itself *)
+            val (typeParameters, _) = case AST.getDefinitionTypeParameters definition
+                                            of [] => (NONE, tenv)
+                                             | l => let val (t, tenv') = createTupleType genTypeForTypeParameter tenv l in (SOME t, tenv') end
+
+            fun genDerivedType (expr) = let val (baseType, tenv') = translateExpr (expr, tenv)
+                                        in (Types.DerivedType(symbol, baseType), tenv') end
+            fun genTypeDerivedFromObject () = let val (objType, tenv') = genType (Env.builtinObject, tenv)
+                                              in (Types.DerivedType(symbol, objType), tenv') end
+
+            val (ty, tenv') = case (body, typeExpr)
+                                of (SOME (AST.Expression(e)), NONE) => translateExpr (e, tenv) (* alias type *)
+                                 | (NONE, SOME e) => genDerivedType e
+                                 | (NONE, NONE) => if Symbol.isSame (symbol, Env.builtinObject)
+                                                   then (Types.RootType, tenv)
+                                                   else genTypeDerivedFromObject ()
+                                 | _ => raise Argh("invalid type definition")
+
+            val ty' = case typeParameters
+                        of SOME t => Types.ParameterizedType (ty, t)
+                         | NONE => ty
+
+          in
+            case Symbol.lookup (tenv, symbol)
+              of NONE => let val tenv'' = Symbol.enter (tenv', symbol, ty')
+                         in (ty', tenv'') end
+               | SOME t => (t, tenv) (* Already generated *)
+          end
+
+          fun genTypes ([], tenv) = tenv
+            | genTypes ((s, _)::rest, tenv) =
+                let val (_, newTenv) = genType (s, tenv)
+                in genTypes(rest, newTenv) end
 
       in
-        case Symbol.lookup (tenv, symbol)
-          of NONE => let val newTenv_ = Symbol.enter (newTenv, symbol, ty)
-                     in (ty, newTenv_) end
-           | SOME t => (t, tenv) (* Already generated *)
+        genTypes ((Symbol.all defTable), Symbol.emptyTable)
       end
-
-      fun genTypes ([], tenv) = tenv
-        | genTypes ((s, _)::rest, tenv) =
-            let val (_, newTenv) = genType (s, tenv)
-            in genTypes(rest, newTenv) end
-
-    in
-      genTypes ((Symbol.all defTable), Symbol.emptyTable)
-    end
 
     (**********************************************************************************************)
     fun collectMethod (fenv, tenv, def) =
-    let
-      val name = createDefinitionSymbol def
-      val nothingType = Option.valOf (Symbol.lookup (tenv, Env.builtinNothing))
+      let
+        val name = createDefinitionSymbol def
+        val nothingType = Option.valOf (Symbol.lookup (tenv, Env.builtinNothing))
 
-      val valueParms = AST.getDefinitionValueParameters def
-      (****TODO handle type parameters *)
-      val typeParms = AST.getDefinitionTypeParameters def
+        val valueParms = AST.getDefinitionValueParameters def
+        (****TODO handle type parameters *)
+        val typeParms = AST.getDefinitionTypeParameters def
 
-      (****TODO proper typing of args *)
-      fun genTypeForArgument argDef =
-        let
-          val id = AST.getDefinitionName argDef
-          val sym = Symbol.create (AST.getIdentifierText id)
-        in
-          Option.valOf (Symbol.lookup (tenv, sym))
-        end
+        (****TODO proper typing of args *)
+        fun genTypeForArgument argDef =
+          let
+            val id = AST.getDefinitionName argDef
+            val sym = Symbol.create (AST.getIdentifierText id)
+          in
+            Option.valOf (Symbol.lookup (tenv, sym))
+          end
 
-      fun genArgType (argDef::[]) = genTypeForArgument argDef
-        | genArgType (argDef::rest) = Types.TupleType (genArgType rest, genTypeForArgument argDef)
-        | genArgType [] = raise Utils.ShouldNotGetHere
+        fun genArgType (argDef::[]) = genTypeForArgument argDef
+          | genArgType (argDef::rest) = Types.TupleType (genTypeForArgument argDef, genArgType rest)
+          | genArgType [] = raise Utils.ShouldNotGetHere
 
-      val argType = case valueParms
-                      of [] => nothingType
-                       | argDef::[] => genTypeForArgument argDef
-                       | argDef::rest => Types.TupleType (genArgType rest, genTypeForArgument argDef)
+        val argType = case valueParms
+                        of [] => nothingType
+                         | argDef::[] => genTypeForArgument argDef
+                         | argDef::rest => Types.TupleType (genTypeForArgument argDef, genArgType rest)
 
-      val resultType = case (AST.getDefinitionTypeExpr def)
-                         of SOME e => let val (t, _) = translateTypeExpr (e, tenv) in t end
-                          | NONE => nothingType
+        val resultType = case (AST.getDefinitionTypeExpr def)
+                           of SOME e => let val (t, _) = translateTypeExpr (e, tenv) in t end
+                            | NONE => nothingType
 
-      val methodType = Types.MethodType (argType, resultType)
+        val methodType = Types.MethodType (argType, resultType)
 
-      val label = Temp.newNamedLabel (Symbol.toString name)
+        val label = Temp.newNamedLabel (Symbol.toString name)
 
-    in
-      case Symbol.lookup (fenv, name)
-        of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, label, def)))
-         | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, label, def)))
-    end
+      in
+        case Symbol.lookup (fenv, name)
+          of SOME (_, dispatchTree) => Symbol.enter (fenv, name, (name, Functions.insertDispatchNode (dispatchTree, methodType, label, def)))
+           | NONE => Symbol.enter(fenv, name, (name, Functions.createDispatchTree (methodType, label, def)))
+      end
 
     (**********************************************************************************************)
     fun collectFunctions (fenv, tenv, []) = fenv

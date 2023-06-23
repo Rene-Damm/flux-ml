@@ -4,6 +4,7 @@ struct
   datatype ty =
       RootType
     | DerivedType       of Symbol.symbol * ty
+    | VariableType      of Symbol.symbol * ty
     | MethodType        of ty * ty
     | ClosureType       of ty * ty
     | TupleType         of ty * ty
@@ -21,6 +22,7 @@ struct
         then true
         else isSubtype (t1, right)
     | isSubtype (DerivedType (_, b), t) = isSubtype (b, t)
+    | isSubtype (VariableType (_, b), t) = isSubtype (b, t)
     | isSubtype (UnionType (a, b), t) = isSubtype (a, t) andalso isSubtype (b, t)
     | isSubtype (IntersectionType (a, b), t) = isSubtype (a, t) orelse isSubtype (b, t)
     | isSubtype (MutableType (_), ImmutableType (_)) = false
@@ -49,12 +51,16 @@ struct
 
   fun toString (RootType) = "Object"
     | toString (DerivedType (s, t)) = (Symbol.toString s) ^ " : " ^ (toString t)
+    | toString (VariableType (s, t)) = "'" ^ (Symbol.toString s) ^ " : " ^ (toString t)
     | toString (UnionType (a, b)) = "(" ^ (toString a) ^ ") & (" ^ (toString b) ^ ")"
     | toString (IntersectionType (a, b)) = "(" ^ (toString a) ^ ") | (" ^ (toString b) ^ ")"
     | toString (MutableType (t)) = "mutable " ^ (toString t)
     | toString (ImmutableType (t)) = "immutable " ^ (toString t)
+    | toString (SingletonType (t)) = "singleton " ^ (toString t)
     | toString (MethodType (a, r)) = "(" ^ (toString a) ^ ") -> (" ^ (toString r) ^ ")"
     | toString (ClosureType (a, r)) = "(" ^ (toString a) ^ ") => (" ^ (toString r) ^ ")"
+    | toString (ParameterizedType (DerivedType (s, t), p)) = (Symbol.toString s) ^ "<" ^ (toString p) ^ "> : " ^ (toString t)
+    | toString (ParameterizedType (t, p)) = "<" ^ (toString p) ^ "> " ^ (toString t)
     | toString _ = raise Utils.NotImplemented
 
 end

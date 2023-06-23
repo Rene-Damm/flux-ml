@@ -79,7 +79,7 @@ program
 
 definition_list_opt
     :                                       ([])
-    | definition_list                       (definition_list)
+    | definition_list                       (List.rev definition_list)
 
 definition_list
     : definition                            ([definition])
@@ -125,7 +125,7 @@ type_parameter_list_opt
 
 type_parameter_list_inner_opt
     :                                       ([])
-    | type_parameter_list                   (type_parameter_list)
+    | type_parameter_list                   (List.rev type_parameter_list)
 
 type_parameter_list
     : type_parameter                       ([type_parameter])
@@ -142,7 +142,7 @@ value_parameter_list_opt
 
 value_parameter_list_inner_opt
     :                                       ([])
-    | value_parameter_list                  (value_parameter_list)
+    | value_parameter_list                  (List.rev value_parameter_list)
 
 value_parameter_list
     : value_parameter                       ([value_parameter])
@@ -162,7 +162,7 @@ type_expr
 
 statement_list_opt
     :                                       ([])
-    | statement_list                        (statement_list)
+    | statement_list                        (List.rev statement_list)
 
 statement_list
     : statement                             ([statement])
