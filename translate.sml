@@ -29,8 +29,10 @@ struct
           val (rightType, tenv2) = translateTypeExpr_ lookupSymbolFn (right, tenv1)
         in
           case oper
-            of AST.AND => (Types.UnionType(leftType, rightType), tenv2)
-             | AST.OR => (Types.IntersectionType(leftType, rightType), tenv2)
+            of AST.AND => (Types.UnionType (leftType, rightType), tenv2)
+             | AST.OR => (Types.IntersectionType (leftType, rightType), tenv2)
+             | AST.APPLY => (Types.InstancedType (leftType, rightType), tenv2)
+             | _ => raise Utils.NotImplemented
         end
       | translateTypeExpr_ _ _ = raise Argh("Invalid type expr")
 
@@ -107,7 +109,7 @@ struct
             val body = AST.getDefinitionBody definition
             val typeExpr = AST.getDefinitionTypeExpr definition
 
-            (*FIXME: we don't want type parameters to leak out beyond just the function itself *)
+            (*TODO: need to allow type parameters to shadow definitions in global scope *)
             val (typeParameters, _) = case AST.getDefinitionTypeParameters definition
                                             of [] => (NONE, tenv)
                                              | l => let val (t, tenv') = createTupleType genTypeForTypeParameter tenv l in (SOME t, tenv') end

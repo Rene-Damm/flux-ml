@@ -1,4 +1,15 @@
 
+fun listToTuple (x::[]) = x
+  | listToTuple (x::rest) =
+      let
+        val r = listToTuple rest
+        val (left, _) = AST.getExpressionRegion x
+        val (_, right) = AST.getExpressionRegion r
+      in
+        AST.Binary { region = (left, right), operator = AST.TUPLE, left = x, right = r }
+      end
+  | listToTuple _ = raise Utils.ShouldNotGetHere
+
 %%
 
 %name Flux
@@ -23,11 +34,11 @@
     | RPAREN
     | LBRACE
     | RBRACE
-	| LANGLE
-	| RANGLE
+    | LANGLE
+    | RANGLE
     | EQUAL
-	| AND
-	| OR
+    | AND
+    | OR
     | EOF
 
 %left OR
@@ -54,6 +65,8 @@
     | value_parameter                   of AST.definition
     | type_expr_opt                     of AST.expression option
     | type_expr                         of AST.expression
+    | type_args_opt                     of AST.expression list
+    | type_expr_list                    of AST.expression list
     | statement_list_opt                of AST.statement list
     | statement_list                    of AST.statement list
     | statement                         of AST.statement
@@ -134,7 +147,6 @@ type_parameter_list
 type_parameter
     : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = NONE, name = identifier, body = NONE })
 
-
 value_parameter_list_opt
     :                                       ([])
     | LPAREN value_parameter_list_inner_opt RPAREN
@@ -156,9 +168,18 @@ type_expr_opt
     | COLON type_expr                       (SOME type_expr)
 
 type_expr
-    : identifier                            (AST.Name identifier)
-	| type_expr AND type_expr				(AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.AND, left = type_expr1, right = type_expr2 })
-	| type_expr OR type_expr				(AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.OR, left = type_expr1, right = type_expr2 })
+    : identifier type_args_opt              (case type_args_opt of [] => AST.Name identifier | l => AST.Binary { region = (identifierleft, type_args_optright), operator = AST.APPLY, left = AST.Name identifier, right = listToTuple type_args_opt })
+    | type_expr AND type_expr               (AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.AND, left = type_expr1, right = type_expr2 })
+    | type_expr OR type_expr                (AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.OR, left = type_expr1, right = type_expr2 })
+    | LPAREN type_expr RPAREN               (type_expr)
+
+type_args_opt
+    :                                       ([])
+    | LANGLE type_expr_list RANGLE          (List.rev type_expr_list)
+
+type_expr_list
+    : type_expr                             ([type_expr])
+    | type_expr_list type_expr              (type_expr::type_expr_list)
 
 statement_list_opt
     :                                       ([])

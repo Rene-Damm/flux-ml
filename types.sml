@@ -61,6 +61,8 @@ struct
     | toString (ClosureType (a, r)) = "(" ^ (toString a) ^ ") => (" ^ (toString r) ^ ")"
     | toString (ParameterizedType (DerivedType (s, t), p)) = (Symbol.toString s) ^ "<" ^ (toString p) ^ "> : " ^ (toString t)
     | toString (ParameterizedType (t, p)) = "<" ^ (toString p) ^ "> " ^ (toString t)
+    (*TODO: expand the instancing by replacing all type variables in type P *)
+    | toString (InstancedType (t, p)) = "(" ^ (toString t) ^ "<" ^ (toString p) ^ ">)"
     | toString _ = raise Utils.NotImplemented
 
 end

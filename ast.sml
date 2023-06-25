@@ -10,7 +10,7 @@ struct
   datatype identifier =
       Identifier            of { region: Source.region, text: string }
 
-  datatype operator = AND | OR
+  datatype operator = AND | OR | APPLY | TUPLE
 
   datatype expression =
       Name                  of identifier
@@ -39,6 +39,12 @@ struct
                                  name: identifier,
                                  body: expressionOrStatementBlock option }
 
+  fun getExpressionRegion (Name (Identifier { region = r, text = _ })) = r
+    | getExpressionRegion (Integer { region = r, value = _ }) = r
+    | getExpressionRegion (Float { region = r, value = _ }) = r
+    | getExpressionRegion (String { region = r, value = _ }) = r
+    | getExpressionRegion (Binary { region = r, operator = _, left = _, right = _ }) = r
+
   fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = _ }) = d
   fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = n, body = _ }) = n
   fun getDefinitionModifiers (Definition { region = _, modifiers = m, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = _ }) = m
@@ -64,6 +70,7 @@ struct
 
       fun operator AND = put "AND"
         | operator OR = put "OR"
+        | operator APPLY = put "APPLY"
 
       fun expression (Name(n)) = id n
         | expression (Integer { region = _, value = i }) = put (Int.toString i)

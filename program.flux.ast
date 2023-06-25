@@ -5,8 +5,8 @@
 ,body=}
   DEF{name=MutableString,defType=TYPE,modifiers=ABSTRACT,type=String,typeParms=,valueParms=,body=}
   DEF{name=ImmutableString,defType=TYPE,modifiers=ABSTRACT,type=String,typeParms=,valueParms=,body=}
-  DEF{name=String,defType=TYPE,modifiers=ABSTRACT,type=BINARY{o=AND,l=Sequence,r=FiniteCollection},typeParms=,valueParms=,body=}
-  DEF{name=Sequence,defType=TYPE,modifiers=ABSTRACT,type=Collection,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
+  DEF{name=String,defType=TYPE,modifiers=ABSTRACT,type=BINARY{o=AND,l=BINARY{o=APPLY,l=Sequence,r=Character},r=BINARY{o=APPLY,l=FiniteCollection,r=Character}},typeParms=,valueParms=,body=}
+  DEF{name=Sequence,defType=TYPE,modifiers=ABSTRACT,type=BINARY{o=APPLY,l=Collection,r=Object},typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
 ,valueParms=,body=}
   DEF{name=FiniteCollection,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=  DEF{name=Object,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
 ,valueParms=,body=}
