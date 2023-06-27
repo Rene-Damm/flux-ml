@@ -23,6 +23,11 @@ abstract type String : Sequence< Character > & FiniteCollection< Character >;
 
 abstract field Count( FiniteCollection ) : Integer;
 
+method Hello() : String
+{
+	return "Hello";
+}
+
 method First( Float ) : Integer
 {
 	return 123;

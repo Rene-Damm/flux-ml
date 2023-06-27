@@ -15,7 +15,7 @@ val strStartPos = ref 0
 
 %header (functor FluxLexFun(structure Tokens: Flux_TOKENS));
 
-%s STRING;
+%s STRING COMMENT;
 
 %%
 
@@ -41,9 +41,15 @@ val strStartPos = ref 0
 <INITIAL> "|"                                   => (Tokens.OR(yypos, yypos + 1));
 <INITIAL> "&"                                   => (Tokens.AND(yypos, yypos + 1));
 <INITIAL> [ \t\r\n]+                            => (continue());
-<INITIAL> .                                     => (Diagnostics.error; continue());
 
 <INITIAL> "\""                                  => (YYBEGIN STRING; strValue := ""; strStartPos := yypos; continue());
 <STRING> "\""                                   => (YYBEGIN INITIAL; Tokens.STRING(!strValue, !strStartPos, yypos + 1));
 <STRING> [^"]+                                  => (strValue := !strValue ^ yytext; continue());
+
+<INITIAL> "//"                                  => (YYBEGIN COMMENT; continue());
+<COMMENT> \n                                    => (YYBEGIN INITIAL; continue());
+<COMMENT> \r                                    => (YYBEGIN INITIAL; continue());
+<COMMENT> .                                     => (continue());
+
+<INITIAL> .                                     => (Diagnostics.error; continue());
 

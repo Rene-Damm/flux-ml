@@ -50,7 +50,7 @@ struct
 
       val args = allocateArgs (argList, integerArgRegisters, floatingPointArgRegisters)
     in
-      Frame { name = name, args = args, size = !stackSize }
+      (Frame { name = name, args = args, size = !stackSize }, args)
     end
 
 end

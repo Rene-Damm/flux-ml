@@ -9,12 +9,30 @@ struct
       PROC of { label: Temp.label, body: Tree.stmt, epiloque: Temp.label, returnValue: Temp.label option, frame: Arch.frame }
     | STRING of Temp.label * string
 
+  datatype variable = VAR of { temp: Temp.temp }
+
   (* Translates a *SINGLE* AST into a list of fragments.
    * No support for translating a program with multiple units. *)
   fun translateProgram program =
   let 
 
     fun createDefinitionSymbol def = Symbol.create (AST.getIdentifierText (AST.getDefinitionName def))
+
+    (**********************************************************************************************)
+    exception StringTableException
+    val stringTable = HashTable.mkTable (HashString.hashString, op =) (100, StringTableException)
+
+    fun internStringLiteral text =
+      case HashTable.find stringTable text
+        of SOME (STRING (label, _)) => label
+         | _ =>
+             let
+               val label = Temp.newNamedLabel "string"
+               val fragment = STRING (label, text)
+             in
+               HashTable.insert stringTable (text, fragment);
+               label
+             end
 
     (**********************************************************************************************)
     fun translateTypeExpr_ lookupSymbolFn (AST.Name(id), tenv) =
@@ -232,15 +250,29 @@ struct
             val returnValueLabel = Temp.newTemp ()
 
             (* Translates an AST.expression into a tree and returns that and the Types.ty of the expression. *)
-            fun translateExpr (AST.Integer { region = _, value = v }) = (Tree.INT v, intType)
-              | translateExpr (AST.Float { region = _, value = v }) = (Tree.FLOAT v, floatType)
-              (*| translateExpr (AST.String { region = _, value = v }) = stringType*) (*TODO: strings*)
-              | translateExpr _ = raise Utils.NotImplemented
+            fun translateExpr venv (AST.Integer { region = _, value = v }) = (Tree.INT v, intType)
+              | translateExpr venv (AST.Float { region = _, value = v }) = (Tree.FLOAT v, floatType)
+              | translateExpr venv (AST.String { region = _, value = v }) =
+                  let
+                    val label = internStringLiteral v
+                  in
+                    (Tree.TEMP label, stringType)
+                  end
+              | translateExpr venv (AST.Binary { region = _, operator = operator, left = left, right = right }) = raise Utils.NotImplemented
+              | translateExpr venv (AST.Name id) =
+                  let
+                    val symbol = Symbol.create (AST.getIdentifierText id)
+                  in
+                    case Symbol.lookup (venv, symbol)
+                      of SOME s => raise Utils.NotImplemented
+                       | NONE => (print (Symbol.toString symbol); raise Utils.NotImplemented)
+                  end
 
-            fun translateStmt (AST.Return { region = _, value = v }) =
+            (*TODO: allow statements to modify venv *)
+            fun translateStmt venv (AST.Return { region = _, value = v }) =
                   let
                     val (exp, ty) = case v
-                                      of SOME e => let val (e, t) = translateExpr e in (SOME e, t) end
+                                      of SOME e => let val (e, t) = translateExpr venv e in (SOME e, t) end
                                        | NONE => (NONE, nothingType)
                   in
                     if not (Types.isSubtype (ty, methodResultType))
@@ -250,12 +282,12 @@ struct
                         of SOME e => Tree.SEQ (Tree.MOVE (Tree.TEMP returnValueLabel, e), Tree.JUMP epiloqueLabel)
                          | NONE => Tree.JUMP epiloqueLabel
                   end
-              | translateStmt _ = raise Utils.NotImplemented
+              | translateStmt venv _ = raise Utils.NotImplemented
 
-            fun translateStmts [] = raise Utils.ShouldNotGetHere
-              | translateStmts (stmt::[]) = translateStmt stmt
+            fun translateStmts venv [] = raise Utils.ShouldNotGetHere
+              | translateStmts venv (stmt::[]) = translateStmt venv stmt
               (*TODO: this should unfold nested SEQs*)
-              | translateStmts (stmt::rest) = Tree.SEQ (translateStmt stmt, translateStmts rest)
+              | translateStmts venv (stmt::rest) = Tree.SEQ (translateStmt venv stmt, translateStmts venv rest)
 
             (* There are no global values so every method gets a fresh value environment. *)
             (*TODO: put predefined values like `argument` in the env *)
@@ -272,24 +304,27 @@ struct
 
             val argFormats = getArgFormats (Types.getLeftOperandType methodType)
 
-            fun processValueArgs ([], venv) = ([], venv)
+            val label = Temp.newNamedLabel (Symbol.toString name)
+            (*REVIEW: Isn't it too early to bring in arch-dependencies? Shouldn't this be restricted to the backend? *)
+            val (frame, valueArgsAccess) = Arch.newFrame (label, argFormats)
+
+            fun processValueArgs ([], venv) = venv
               | processValueArgs (argDef::rest, venv) =
                 let
                   val argName = createDefinitionSymbol argDef
-                  val venv' = Symbol.enter (venv, argName, ())
+                  (* For now, add all args as temps just like any other variable. *)
+                  val venv' = Symbol.enter (venv, argName, Tree.TEMP (Temp.newTemp ()))
                 in
                   processValueArgs (rest, venv')
                 end
 
             val venv' = processValueArgs ((AST.getDefinitionValueParameters method), venvInitial)
 
-            val label = Temp.newNamedLabel (Symbol.toString name)
-            val frame = Arch.newFrame (label, argFormats)
-
             val body =
               case (AST.getDefinitionBody method)
                 of SOME (AST.Expression(e)) => raise Utils.NotImplemented
-                 | SOME (AST.Statement(l)) => translateStmts l
+                 | SOME (AST.Statement([])) => Tree.NOP
+                 | SOME (AST.Statement(l)) => translateStmts venv' l
                  | _ => Tree.NOP
 
           in
@@ -299,11 +334,14 @@ struct
         processNode dispatchTree
       end
 
+    val progFragments = List.concat (map translateFunction (Symbol.all fenv))
+    val stringFragments = HashTable.listItems stringTable
+
   in
     Env.dumpTypes (tenv, TextIO.stdOut);
     Env.dumpFunctions (fenv, TextIO.stdOut);
 
-    List.concat (map translateFunction (Symbol.all fenv))
+    List.concat [progFragments, stringFragments]
   end
 
 end

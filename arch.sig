@@ -7,7 +7,7 @@ sig
   type frame
   type access
 
-  val newFrame : Temp.label * format list -> frame
+  val newFrame : Temp.label * format list -> frame * access list
 
 end
 

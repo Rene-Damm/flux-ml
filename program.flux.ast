@@ -1,6 +1,7 @@
 [
   DEF{name=First,defType=METHOD,modifiers=,type=Integer,typeParms=,valueParms=  DEF{name=Float,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
 ,body=[RETURN{e=123}]}
+  DEF{name=Hello,defType=METHOD,modifiers=,type=String,typeParms=,valueParms=,body=[]}
   DEF{name=Count,defType=METHOD,modifiers=ABSTRACT,type=Integer,typeParms=,valueParms=  DEF{name=FiniteCollection,defType=LOCAL,modifiers=,type=,typeParms=,valueParms=,body=}
 ,body=}
   DEF{name=MutableString,defType=TYPE,modifiers=ABSTRACT,type=String,typeParms=,valueParms=,body=}
