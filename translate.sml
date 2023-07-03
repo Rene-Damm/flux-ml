@@ -9,7 +9,7 @@ struct
       PROC of { label: Temp.label, body: Tree.stmt, epiloque: Temp.label, returnValue: Temp.label option, frame: Arch.frame }
     | STRING of Temp.label * string
 
-  datatype variable = VAR of { temp: Temp.temp }
+  datatype variable = VAR of { location: Tree.expr, typ: Types.ty }
 
   (* Translates a *SINGLE* AST into a list of fragments.
    * No support for translating a program with multiple units. *)
@@ -52,9 +52,18 @@ struct
              | AST.APPLY => (Types.InstancedType (leftType, rightType), tenv2)
              | _ => raise Utils.NotImplemented
         end
+      | translateTypeExpr_ lookupSymbolFn (AST.Unary { region = _, operator = oper, expr = expr }, tenv) =
+        let
+          val (ty, tenv') = translateTypeExpr_ lookupSymbolFn (expr, tenv)
+        in
+          case oper
+            of AST.MUTABLE => (Types.MutableType ty, tenv')
+             | AST.IMMUTABLE => (Types.ImmutableType ty, tenv')
+             | _ => raise Utils.ShouldNotGetHere
+        end
       | translateTypeExpr_ _ _ = raise Argh("Invalid type expr")
 
-    val translateTypeExpr = translateTypeExpr_ (fn (tenv, symbol) => (Option.valOf (Symbol.lookup (tenv, symbol)), tenv))
+    val translateTypeExpr = translateTypeExpr_ (fn (tenv, symbol) => (Utils.valOf "translateTypeExpr_" (Symbol.lookup (tenv, symbol)), tenv))
     
     (**********************************************************************************************)
     fun collectTypeDefinition (table, def) =
@@ -123,7 +132,7 @@ struct
 
         and genType (symbol, tenv) =
           let
-            val definition = Option.valOf (Symbol.lookup (defTable, symbol))
+            val definition = Utils.valOf "genType" (Symbol.lookup (defTable, symbol))
             val body = AST.getDefinitionBody definition
             val typeExpr = AST.getDefinitionTypeExpr definition
 
@@ -169,19 +178,22 @@ struct
     fun collectMethod (fenv, tenv, def) =
       let
         val name = createDefinitionSymbol def
-        val nothingType = Option.valOf (Symbol.lookup (tenv, Env.builtinNothing))
+        val nothingType = Utils.valOf "collectMethod" (Symbol.lookup (tenv, Env.builtinNothing))
 
         val valueParms = AST.getDefinitionValueParameters def
         (****TODO handle type parameters *)
         val typeParms = AST.getDefinitionTypeParameters def
 
-        (****TODO proper typing of args *)
+        (****TODO proper typing of args *) (*<----------------------*)
         fun genTypeForArgument argDef =
           let
             val id = AST.getDefinitionName argDef
             val sym = Symbol.create (AST.getIdentifierText id)
+            val typeExpr = AST.getDefinitionTypeExpr argDef
           in
-            Option.valOf (Symbol.lookup (tenv, sym))
+            case typeExpr
+              of SOME e => let val (t, _) = translateTypeExpr (e, tenv) in t end
+               | NONE => Utils.valOf "genTypeForArgument" (Symbol.lookup (tenv, sym))
           end
 
         fun genArgType (argDef::[]) = genTypeForArgument argDef
@@ -218,20 +230,60 @@ struct
           collectFunctions (newFenv, tenv, rest)
         end
 
+    (**********************************************************************************************)
+    fun generateSingletons ([], tenv) = Symbol.emptyTable
+      | generateSingletons (ast::rest, tenv) =
+          let
+            val venv = generateSingletons (rest, tenv)
+          in
+            case AST.getDefinitionType ast
+              of AST.Object =>
+                  let 
+                    val name = createDefinitionSymbol ast
+                    val ty = Utils.valOf "generateSingletons" (Symbol.lookup (tenv, name))
+                    val tree =
+                      if Symbol.isSame (name, Env.builtinTrue)
+                      then Tree.TRUE
+                      else if Symbol.isSame (name, Env.builtinFalse)
+                      then Tree.FALSE
+                      else if Symbol.isSame (name, Env.builtinNothing)
+                      then Tree.NOTHING
+                      else raise Utils.NotImplemented
+                    val venv' = Symbol.enter (venv, name, VAR { location = tree, typ = ty })
+                  in
+                    venv'
+                  end
+               | _ => venv
+          end
+
     (* Put all type/object definition ASTs into a table and then
        generate types for them. *)
     val typeDefs = collectTypeDefinitions (Symbol.emptyTable, program)
     val tenv = generateTypes typeDefs
+
+    (* Put all OBJECT definitions in a table as variables. *)
+    val venvGlobal = generateSingletons (Symbol.entries typeDefs, tenv)
 
     fun lookupBuiltinType name =
       case Symbol.lookup (tenv, name)
         of SOME t => t
          | NONE => raise Argh("builtin type not found")
 
+    fun lookupBuiltinValue name =
+      case Symbol.lookup (venvGlobal, name)
+        of SOME (VAR { location = l, typ = _ }) => l
+         | NONE => raise Argh("builtin value not found")
+
     val intType = lookupBuiltinType Env.builtinInteger
     val floatType = lookupBuiltinType Env.builtinFloat
     val stringType = lookupBuiltinType Env.builtinString
     val nothingType = lookupBuiltinType Env.builtinNothing
+
+    fun isBuiltinNumericType t = Types.isSubtype (t, intType) orelse Types.isSubtype (t, floatType)
+
+    val trueValue = lookupBuiltinValue Env.builtinTrue
+    val nothingValue = lookupBuiltinValue Env.builtinNothing
+    val falseValue = lookupBuiltinValue Env.builtinFalse
 
     (* Collect all functions and arrange the methods in them into dispatch trees. *)
     val fenv = collectFunctions (Symbol.emptyTable, tenv, program)
@@ -258,15 +310,72 @@ struct
                   in
                     (Tree.TEMP label, stringType)
                   end
-              | translateExpr venv (AST.Binary { region = _, operator = operator, left = left, right = right }) = raise Utils.NotImplemented
+              | translateExpr venv (AST.Binary { region = _, operator = AST.APPLY, left = left, right = right }) =
+                  let
+                    val (rightTree, rightType) =
+                      case right
+                        of AST.Binary { region = _, operator = AST.TUPLE, left = l, right = r } => raise Utils.NotImplemented
+                         | _ => let val (tree, ty) = translateExpr venv right in ([tree], ty) end
+                  in
+                    case left
+                      of AST.Name id =>
+                           let
+                             val (_, dispatchTree) = case Symbol.lookup (fenv, (Symbol.create (AST.getIdentifierText id)))
+                                                       of SOME node => node
+                                                        | NONE => raise Utils.NotImplemented
+                             val dispatchNode = case Functions.lookupDispatchNode (dispatchTree, rightType)
+                                                  of SOME node => node
+                                                   | NONE => raise Utils.NotImplemented
+                             val resultType = Types.getRightOperandType (Functions.getDispatchNodeType dispatchNode)
+                           in
+                             (Tree.CALL (Functions.getDispatchNodeLabel dispatchNode, rightTree), resultType)
+                           end
+                       | expr as AST.Binary { region = _, operator = AST.DOT, left = _, right = _ } => raise Utils.NotImplemented
+                       | _ => raise Utils.ShouldNotGetHere
+                  end
+              | translateExpr venv (AST.Binary { region = _, operator = operator, left = left, right = right }) =
+                  let
+                    val (leftTree, leftType) = translateExpr venv left
+                    val (rightTree, rightType) = translateExpr venv right
+                  in
+                    case operator
+                      of AST.TUPLE => raise Utils.NotImplemented
+                       | _ =>
+                           if (isBuiltinNumericType leftType) andalso (isBuiltinNumericType rightType)
+                          then
+                            case operator
+                              of _ => raise Utils.NotImplemented (*TODO replace call with direct expression tree*)
+                          else
+                            let 
+                              val functionName = case operator
+                                                   of AST.PLUS => Env.builtinPlus
+                                                    | _ => raise Utils.NotImplemented
+                              val function = case Symbol.lookup (fenv, functionName)
+                                               of SOME (_, f) => f
+                                                | _ => raise Argh ("undefined operator")
+                              val node = Functions.lookupDispatchNode (function, Types.TupleType (leftType, rightType))
+                            in
+                              case node
+                                of SOME (Functions.DispatchNode { methodType = methodType, children = _, label = label, method = _ }) =>
+                                    (Tree.CALL (label, [leftTree, rightTree]), Types.getRightOperandType methodType)
+                                 | NONE => raise Argh ("no matching implementation for operator")
+                            end
+                  end
               | translateExpr venv (AST.Name id) =
                   let
                     val symbol = Symbol.create (AST.getIdentifierText id)
                   in
+                    (* Try value first *)
                     case Symbol.lookup (venv, symbol)
-                      of SOME s => raise Utils.NotImplemented
-                       | NONE => (print (Symbol.toString symbol); raise Utils.NotImplemented)
+                      of SOME (VAR { location = expr, typ = ty }) => (expr, ty)
+                       | NONE =>
+                           (* No value, try function *)
+                           case Symbol.lookup (fenv, symbol)
+                             of SOME dispachNode => raise Utils.NotImplemented (*TODO: create closure *)
+                              | NONE => (print (Symbol.toString symbol); raise Utils.NotImplemented)
                   end
+              | translateExpr venv (AST.Nothing { region = _ }) = (nothingValue, nothingType)
+              | translateExpr venv _ = raise Utils.NotImplemented
 
             (*TODO: allow statements to modify venv *)
             fun translateStmt venv (AST.Return { region = _, value = v }) =
@@ -282,16 +391,18 @@ struct
                         of SOME e => Tree.SEQ (Tree.MOVE (Tree.TEMP returnValueLabel, e), Tree.JUMP epiloqueLabel)
                          | NONE => Tree.JUMP epiloqueLabel
                   end
+              | translateStmt venv (AST.ExpressionStatement(expr)) =
+                  let
+                    val (tree, typ) = translateExpr venv expr
+                  in
+                    Tree.EXPR (tree)
+                  end
               | translateStmt venv _ = raise Utils.NotImplemented
 
             fun translateStmts venv [] = raise Utils.ShouldNotGetHere
               | translateStmts venv (stmt::[]) = translateStmt venv stmt
               (*TODO: this should unfold nested SEQs*)
               | translateStmts venv (stmt::rest) = Tree.SEQ (translateStmt venv stmt, translateStmts venv rest)
-
-            (* There are no global values so every method gets a fresh value environment. *)
-            (*TODO: put predefined values like `argument` in the env *)
-            val venvInitial = Symbol.emptyTable
 
             fun getArgFormat (Types.DerivedType (name, _)) =
                   if Symbol.isSame (name, Env.builtinInteger) then Arch.Int32
@@ -308,17 +419,18 @@ struct
             (*REVIEW: Isn't it too early to bring in arch-dependencies? Shouldn't this be restricted to the backend? *)
             val (frame, valueArgsAccess) = Arch.newFrame (label, argFormats)
 
-            fun processValueArgs ([], venv) = venv
-              | processValueArgs (argDef::rest, venv) =
+            fun processValueArgs ([], _, venv) = venv
+              | processValueArgs (argDef::rest, argType::restTypes, venv) =
                 let
                   val argName = createDefinitionSymbol argDef
                   (* For now, add all args as temps just like any other variable. *)
-                  val venv' = Symbol.enter (venv, argName, Tree.TEMP (Temp.newTemp ()))
+                  val venv' = Symbol.enter (venv, argName, VAR { location = Tree.TEMP (Temp.newTemp ()), typ = argType })
                 in
-                  processValueArgs (rest, venv')
+                  processValueArgs (rest, restTypes, venv')
                 end
+              | processValueArgs (_, _, _) = raise Utils.ShouldNotGetHere
 
-            val venv' = processValueArgs ((AST.getDefinitionValueParameters method), venvInitial)
+            val venv' = processValueArgs ((AST.getDefinitionValueParameters method), (Types.toList (Types.getLeftOperandType methodType)), venvGlobal)
 
             val body =
               case (AST.getDefinitionBody method)

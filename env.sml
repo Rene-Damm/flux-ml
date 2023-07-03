@@ -6,6 +6,10 @@ sig
   val builtinInteger : Symbol.symbol
   val builtinFloat : Symbol.symbol
   val builtinString : Symbol.symbol
+  val builtinTrue : Symbol.symbol
+  val builtinFalse : Symbol.symbol
+  val builtinPlus : Symbol.symbol
+  val builtinMinus : Symbol.symbol
 
   type typeTable = Types.ty Symbol.table
   type 'a functionTable = 'a Functions.fu Symbol.table
@@ -26,6 +30,10 @@ struct
   val builtinInteger = Symbol.create "Integer"
   val builtinFloat = Symbol.create "Float"
   val builtinString = Symbol.create "String"
+  val builtinTrue = Symbol.create "True"
+  val builtinFalse = Symbol.create "False"
+  val builtinPlus = Symbol.create "+"
+  val builtinMinus = Symbol.create "-"
 
   fun dumpTypes(table: typeTable, stream) =
   let

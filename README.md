@@ -6,7 +6,20 @@ It is implemented in [Standard ML](https://www.smlnj.org/).
 
 Since the primary goal is __NOT__ to implement a compiler for Flux but to learn about compiler construction, this does not use LLVM (which would make implementing a full compiler just that much easier).
 
-Flux is my own language design from a good while back. It is an imperative, object-oriented language with multiple-dispatch, symmetric functions (all functions have one argument and one result; essentially like in functional languages like ML), a powerful type system, and &ndash; in the real thing &ndash; a module system, too. It uses a C-style syntax and roughly looks like this.
+## How to Run It
+
+Requires SML of New Jersey.
+
+```
+C:\sml
+Standard ML of New Jersey (32-bit) v110.99.3 [built: Thu Jul 28 00:45:02 2022]
+- CM.make("sources.cm");
+- Main.run();
+```
+
+## The Language
+
+Flux is my own language design from a good while back. It is an imperative, object-oriented language with multiple-dispatch, symmetric functions (all functions have one argument and one result; essentially like in functional languages like ML), a powerful type system, and &ndash; in the "real" thing &ndash; a module system, too. It uses a C-style syntax and roughly looks like this.
 
 ```
 // Types have no inherent structure. You just declare them.

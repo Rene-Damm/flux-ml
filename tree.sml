@@ -1,14 +1,16 @@
 structure Tree =
 struct
 
-  datatype expr = INT of int
+  datatype expr = TRUE
+                | FALSE
+                | NOTHING
+                | INT of int
                 | FLOAT of real
                 | NAME of Temp.label
                 | TEMP of Temp.temp
                 | BINOP of binop * expr * expr
                 | MEM of expr
-                | CALL of expr * expr list (*??*)
-                | ESEQ of stmt * expr
+                | CALL of Temp.label * expr list
 
        and stmt = MOVE of expr * expr
                 | EXPR of expr

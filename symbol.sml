@@ -13,6 +13,7 @@ sig
   val enter : ('a table * symbol * 'a) -> 'a table
   val lookup : ('a table * symbol ) -> 'a option
   val all : ('a table) -> (symbol * 'a) list
+  val entries : ('a table) -> 'a list
 
 end
 
@@ -37,6 +38,9 @@ struct
 
   fun all table =
     AtomBinaryMap.listItemsi table
+
+  fun entries table =
+    AtomBinaryMap.listItems table
 
 end
 

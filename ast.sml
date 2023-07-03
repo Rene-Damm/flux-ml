@@ -10,18 +10,21 @@ struct
   datatype identifier =
       Identifier            of { region: Source.region, text: string }
 
-  datatype operator = AND | OR | APPLY | TUPLE
+  datatype operator = AND | OR | APPLY | TUPLE | PLUS | MINUS | MUL | DIV | DOT | NOT | MUTABLE | IMMUTABLE
 
   datatype expression =
-      Name                  of identifier
+      Nothing               of { region: Source.region }
+    | Name                  of identifier
     | Integer               of { region: Source.region, value: int }
     | Float                 of { region: Source.region, value: real }
     | String                of { region: Source.region, value: string }
     | Binary                of { region: Source.region, operator: operator, left: expression, right: expression }
+    | Unary                 of { region: Source.region, operator: operator, expr: expression }
 
   datatype statement =
       Return                of { region: Source.region, value: expression option }
     | Variable              of definition
+    | ExpressionStatement   of expression
 
   and expressionOrStatementBlock =
       Expression            of expression
@@ -40,10 +43,12 @@ struct
                                  body: expressionOrStatementBlock option }
 
   fun getExpressionRegion (Name (Identifier { region = r, text = _ })) = r
+    | getExpressionRegion (Nothing { region = r }) = r
     | getExpressionRegion (Integer { region = r, value = _ }) = r
     | getExpressionRegion (Float { region = r, value = _ }) = r
     | getExpressionRegion (String { region = r, value = _ }) = r
     | getExpressionRegion (Binary { region = r, operator = _, left = _, right = _ }) = r
+    | getExpressionRegion (Unary { region = r, operator = _, expr = _ }) = r
 
   fun getDefinitionType (Definition { region = _, modifiers = _, defType = d, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = _ }) = d
   fun getDefinitionName (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = n, body = _ }) = n
@@ -71,12 +76,23 @@ struct
       fun operator AND = put "AND"
         | operator OR = put "OR"
         | operator APPLY = put "APPLY"
+        | operator TUPLE = put "TUPLE"
+        | operator PLUS = put "PLUS"
+        | operator MINUS = put "MINUS"
+        | operator MUL = put "MUL"
+        | operator DIV = put "DIV"
+        | operator DOT = put "DOT"
+        | operator NOT = put "NOT"
+        | operator MUTABLE = put "MUTABLE"
+        | operator IMMUTABLE = put "IMMUTABLE"
 
       fun expression (Name(n)) = id n
+        | expression (Nothing { region = _ }) = put "()"
         | expression (Integer { region = _, value = i }) = put (Int.toString i)
         | expression (Float { region = _, value = f }) = put (Real.toString f)
         | expression (String { region = _, value = s }) = put s
         | expression (Binary { region = _, operator = oper, left = l, right = r }) = (put "BINARY{o="; operator oper; put ",l="; expression l; put ",r="; expression r; put "}")
+        | expression (Unary { region = _, operator = oper, expr = e }) = (put "UNARY{o="; operator oper; put ",e="; expression e; put "}")
 
       fun expressionOpt (NONE) = ()
         | expressionOpt (SOME e) = expression e
@@ -84,6 +100,7 @@ struct
       fun statement (Return { region = _, value = NONE }) = put "RETURN"
         | statement (Return { region = _, value = SOME e }) = (put "RETURN{e="; expression e; put "}")
         | statement (Variable(d)) = (put "LOCAL{d="; definition d; put "}")
+        | statement (ExpressionStatement(e)) = (put "EXPR{e="; expression e; put "}")
 
       and exprOrStatement (NONE) = ()
         | exprOrStatement (SOME(Expression(e))) = expression e

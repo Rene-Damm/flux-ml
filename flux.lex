@@ -19,6 +19,15 @@ val strStartPos = ref 0
 
 %%
 
+<INITIAL> "\""                                  => (YYBEGIN STRING; strValue := ""; strStartPos := yypos; continue());
+<STRING> "\""                                   => (YYBEGIN INITIAL; Tokens.STRING(!strValue, !strStartPos, yypos + 1));
+<STRING> [^"]+                                  => (strValue := !strValue ^ yytext; continue());
+
+<INITIAL> "//"                                  => (YYBEGIN COMMENT; continue());
+<COMMENT> \n                                    => (YYBEGIN INITIAL; continue());
+<COMMENT> \r                                    => (YYBEGIN INITIAL; continue());
+<COMMENT> .                                     => (continue());
+
 <INITIAL> "type"                                => (Tokens.TYPE(yypos, yypos + 4));
 <INITIAL> "method"                              => (Tokens.METHOD(yypos, yypos + 6));
 <INITIAL> "field"                               => (Tokens.FIELD(yypos, yypos + 5));
@@ -27,8 +36,10 @@ val strStartPos = ref 0
 <INITIAL> "immutable"                           => (Tokens.IMMUTABLE(yypos, yypos + 9));
 <INITIAL> "mutable"                             => (Tokens.MUTABLE(yypos, yypos + 7));
 <INITIAL> "builtin"                             => (Tokens.BUILTIN(yypos, yypos + 7));
+<INITIAL> "return"                              => (Tokens.RETURN(yypos, yypos + 6));
 <INITIAL> [0-9]+                                => (Tokens.INTEGER(Option.valOf(Int.fromString yytext), yypos, yypos + size yytext));
-<INITIAL> [A-Za-z_][A-Za-z0-9_]*                => (Tokens.ID(yytext, yypos, yypos + size yytext));
+<INITIAL> [A-Za-z_][A-Za-z0-9_]*!?              => (Tokens.ID(yytext, yypos, yypos + size yytext));
+<INITIAL> \\[+\-*\/]                            => (Tokens.ID(String.substring (yytext, 1, 1), yypos + 1, yypos + 2));
 <INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos, yypos + 1));
 <INITIAL> ":"                                   => (Tokens.COLON(yypos, yypos + 1));
 <INITIAL> "("                                   => (Tokens.LPAREN(yypos, yypos + 1));
@@ -40,16 +51,13 @@ val strStartPos = ref 0
 <INITIAL> "="                                   => (Tokens.EQUAL(yypos, yypos + 1));
 <INITIAL> "|"                                   => (Tokens.OR(yypos, yypos + 1));
 <INITIAL> "&"                                   => (Tokens.AND(yypos, yypos + 1));
+<INITIAL> "+"                                   => (Tokens.PLUS(yypos, yypos + 1));
+<INITIAL> "-"                                   => (Tokens.MINUS(yypos, yypos + 1));
+<INITIAL> "."                                   => (Tokens.DOT(yypos, yypos + 1));
+<INITIAL> ","                                   => (Tokens.COMMA(yypos, yypos + 1));
+<INITIAL> "*"                                   => (Tokens.MUL(yypos, yypos + 1));
+<INITIAL> "/"                                   => (Tokens.DIV(yypos, yypos + 1));
 <INITIAL> [ \t\r\n]+                            => (continue());
-
-<INITIAL> "\""                                  => (YYBEGIN STRING; strValue := ""; strStartPos := yypos; continue());
-<STRING> "\""                                   => (YYBEGIN INITIAL; Tokens.STRING(!strValue, !strStartPos, yypos + 1));
-<STRING> [^"]+                                  => (strValue := !strValue ^ yytext; continue());
-
-<INITIAL> "//"                                  => (YYBEGIN COMMENT; continue());
-<COMMENT> \n                                    => (YYBEGIN INITIAL; continue());
-<COMMENT> \r                                    => (YYBEGIN INITIAL; continue());
-<COMMENT> .                                     => (continue());
 
 <INITIAL> .                                     => (Diagnostics.error; continue());
 

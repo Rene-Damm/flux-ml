@@ -14,8 +14,8 @@ struct
   fun parse filename =
     let
       val file = TextIO.openIn filename
+      fun parseError(msg, startPos, endPos) = (print (Int.toString startPos); print ":"; print (Int.toString endPos); print ": "; print msg; raise Utils.NotImplemented)
       fun get _ = TextIO.input file
-      fun parseError(msg, startPos, endPos) = ()
       val lexer = LrParser.Stream.streamify (FluxLex.makeLexer get)
       val (ast, _) = FluxParser.parse(30, lexer, parseError, ())
     in

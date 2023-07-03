@@ -35,9 +35,28 @@ struct
     else DispatchNode { methodType = nodeType, children = goThroughChildren nodeChildren, label = nodeLabel, method = nodeMethod }
   end
 
+  fun lookupDispatchNode (node as DispatchNode { methodType = methodType, children = children, label = _, method = _ }, argType) =
+    let
+      val methodArgType = Types.getLeftOperandType methodType
+
+      fun lookupChild [] = NONE
+        | lookupChild (child::rest) =
+            case lookupDispatchNode (child, argType)
+              of NONE => lookupChild rest
+               | r => r
+    in
+      if Types.isSubtype (argType, methodArgType)
+      then
+        case lookupChild children
+          of SOME n => SOME n
+           | NONE => SOME node
+      else NONE
+    end
+
   fun getDispatchNodeChildren (DispatchNode { methodType = _, children = c, label = _, method = _ }) = c
   fun getDispatchNodeMethod (DispatchNode { methodType = _, children = _, label = _, method = m }) = m
   fun getDispatchNodeLabel (DispatchNode { methodType = _, children = _, label = l, method = _ }) = l
+  fun getDispatchNodeType (DispatchNode { methodType = t, children = _, label =_, method = _ }) = t
 
 end
 
