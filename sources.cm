@@ -12,6 +12,7 @@ env.sml
 functions.sml
 main.sml
 parse.sml
+pprint.sml
 source.sml
 symbol.sml
 temp.sig

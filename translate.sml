@@ -184,7 +184,6 @@ struct
         (****TODO handle type parameters *)
         val typeParms = AST.getDefinitionTypeParameters def
 
-        (****TODO proper typing of args *) (*<----------------------*)
         fun genTypeForArgument argDef =
           let
             val id = AST.getDefinitionName argDef
@@ -415,7 +414,6 @@ struct
 
             val argFormats = getArgFormats (Types.getLeftOperandType methodType)
 
-            val label = Temp.newNamedLabel (Symbol.toString name)
             (*REVIEW: Isn't it too early to bring in arch-dependencies? Shouldn't this be restricted to the backend? *)
             val (frame, valueArgsAccess) = Arch.newFrame (label, argFormats)
 

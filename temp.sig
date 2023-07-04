@@ -8,5 +8,8 @@ sig
   val newLabel : unit -> label
   val newNamedLabel : string -> label
 
+  val tempToString : temp -> string
+  val labelToString : label -> string
+
 end
 

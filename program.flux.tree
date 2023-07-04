@@ -1,0 +1,34 @@
+PROC ._plus225[
+  body=[
+    NOP
+      ];
+  retVal=temp131]
+
+PROC ._plus224[
+  body=[
+    NOP
+      ];
+  retVal=temp134]
+
+PROC .Main222[
+  body=[
+    CALL(Print226,CALL(_plus225,CALL(Hello223,NOTHING),string230))
+      ];
+  retVal=NONE]
+
+PROC .Hello223[
+  body=[
+    MOVE(temp138,string232)JMP Hello_epilogue231
+      ];
+  retVal=temp138]
+
+PROC .Print226[
+  body=[
+    NOP
+      ];
+  retVal=NONE]
+
+STRING .string230 " World!"
+
+STRING .string232 "Hello"
+
