@@ -10,10 +10,12 @@ struct
   datatype identifier =
       Identifier            of { region: Source.region, text: string }
 
-  datatype operator = AND | OR | APPLY | TUPLE | PLUS | MINUS | MUL | DIV | DOT | NOT | MUTABLE | IMMUTABLE
+  datatype operator = AND | OR | APPLY | TYPE_APPLY | TUPLE | PLUS | MINUS | MUL | DIV | MOD
+                    | DOT | NOT | GTEQ | LTEQ | EQ | NEQ | LT | GT | MUTABLE | IMMUTABLE
 
   datatype expression =
       Nothing               of { region: Source.region }
+    (*| Name                  of { region: Source.region, name: identifier, typeArgs: expression list }*)
     | Name                  of identifier
     | Integer               of { region: Source.region, value: int }
     | Float                 of { region: Source.region, value: real }
@@ -23,8 +25,13 @@ struct
 
   datatype statement =
       Return                of { region: Source.region, value: expression option }
+    | If                    of { region: Source.region, condition: expression, trueBranch: statement, falseBranch: statement option }
+    | Switch                of { region: Source.region, value: expression, branches: caseBlock list }
     | Variable              of definition
     | ExpressionStatement   of expression
+    | BlockStatement        of statement list
+
+  and caseBlock = Case of { region: Source.region, values: expression list, body: statement list }
 
   and expressionOrStatementBlock =
       Expression            of expression
@@ -39,7 +46,7 @@ struct
                                  typeParameters: definition list,
                                  valueParameters: definition list,
                                  typeExpr: expression option,
-                                 name: identifier,
+                                 name: identifier option,
                                  body: expressionOrStatementBlock option }
 
   fun getExpressionRegion (Name (Identifier { region = r, text = _ })) = r
@@ -70,44 +77,61 @@ struct
       fun increaseIndentation () = (indentLevel := !indentLevel + 1)
       fun decreaseIndentation () = (indentLevel := !indentLevel - 1)
       fun indent () = putIndent (!indentLevel)
+      fun seq sep func [] = ()
+        | seq sep func (x::[]) = func x
+        | seq sep func (x::rest) = (func x; put sep; seq sep func rest)
 
       fun id (Identifier { region = _, text = t }) = put t
 
       fun operator AND = put "AND"
         | operator OR = put "OR"
+        | operator TYPE_APPLY = put "TYPE_APPLY"
         | operator APPLY = put "APPLY"
         | operator TUPLE = put "TUPLE"
         | operator PLUS = put "PLUS"
         | operator MINUS = put "MINUS"
         | operator MUL = put "MUL"
         | operator DIV = put "DIV"
+        | operator MOD = put "MOD"
         | operator DOT = put "DOT"
         | operator NOT = put "NOT"
+        | operator EQ = put "EQ"
+        | operator NEQ = put "NEQ"
+        | operator LT = put "LT"
+        | operator GT = put "GT"
+        | operator LTEQ = put "LTEQ"
+        | operator GTEQ = put "GTEQ"
         | operator MUTABLE = put "MUTABLE"
         | operator IMMUTABLE = put "IMMUTABLE"
 
-      fun expression (Name(n)) = id n
+      fun expression (Name (n)) = id n
         | expression (Nothing { region = _ }) = put "()"
         | expression (Integer { region = _, value = i }) = put (Int.toString i)
         | expression (Float { region = _, value = f }) = put (Real.toString f)
-        | expression (String { region = _, value = s }) = put s
+        | expression (String { region = _, value = s }) = (put "\""; put s; put "\"")
         | expression (Binary { region = _, operator = oper, left = l, right = r }) = (put "BINARY{o="; operator oper; put ",l="; expression l; put ",r="; expression r; put "}")
         | expression (Unary { region = _, operator = oper, expr = e }) = (put "UNARY{o="; operator oper; put ",e="; expression e; put "}")
 
       fun expressionOpt (NONE) = ()
         | expressionOpt (SOME e) = expression e
 
-      fun statement (Return { region = _, value = NONE }) = put "RETURN"
+      fun caseBlock (Case { region = _, values = v, body = b }) = (put "CASE("; seq "," (fn e => expression e) v; put "{"; seq ";" (fn s => statement s) b; put "}")
+
+      and statement (Return { region = _, value = NONE }) = put "RETURN"
         | statement (Return { region = _, value = SOME e }) = (put "RETURN{e="; expression e; put "}")
-        | statement (Variable(d)) = (put "LOCAL{d="; definition d; put "}")
-        | statement (ExpressionStatement(e)) = (put "EXPR{e="; expression e; put "}")
+        | statement (If { region = _, condition = e, trueBranch = t, falseBranch = NONE }) = (put "IF("; expression e; put ","; statement t; put ")")
+        | statement (If { region = _, condition = e, trueBranch = t, falseBranch = SOME f }) = (put "IF("; expression e; put ","; statement t; put ","; statement f; put ")")
+        | statement (Switch { region = _, value = e, branches = l }) = (put "SWITCH("; expression e; put "){"; seq ";" (fn b => caseBlock b) l; put "}")
+        | statement (Variable d) = (put "LOCAL{d="; definition d; put "}")
+        | statement (ExpressionStatement e) = (put "EXPR{e="; expression e; put "}")
+        | statement (BlockStatement l) = (put "BLOCK{"; map (fn s => (statement s; put "\n")) l; put "}")
 
       and exprOrStatement (NONE) = ()
-        | exprOrStatement (SOME(Expression(e))) = expression e
-        | exprOrStatement (SOME(Statement(l))) =
+        | exprOrStatement (SOME (Expression (e))) = expression e
+        | exprOrStatement (SOME (Statement (l))) =
           let
             fun print [] = ()
-              | print (s::rest) = (print rest; statement s)
+              | print (s::rest) = (statement s; print rest)
           in
             put "[";
             increaseIndentation;
@@ -116,10 +140,10 @@ struct
             put "]"
           end
 
-      and modifier (Abstract(_)) = "ABSTRACT"
-        | modifier (Immutable(_)) = "IMMUTABLE"
-        | modifier (Mutable(_)) = "MUTABLE"
-        | modifier (Builtin(_)) = "BUILTIN"
+      and modifier (Abstract (_)) = "ABSTRACT"
+        | modifier (Immutable (_)) = "IMMUTABLE"
+        | modifier (Mutable (_)) = "MUTABLE"
+        | modifier (Builtin (_)) = "BUILTIN"
 
       and modifierList [] = ()
         | modifierList (m::[]) = put (modifier m)
@@ -129,12 +153,13 @@ struct
         | definitionType Method = "METHOD"
         | definitionType Field = "FIELD"
         | definitionType Object = "OBJECT"
-        | definitionType Local = "LOCAL"
+        | definitionType Local = "VAR"
 
       and definition (Definition { defType = t, region = _, modifiers = m, typeParameters = tp, valueParameters = vp, typeExpr = e, name = n, body = b }) =
         (put "DEF{";
          put "name=";
-         id n;
+         case n
+           of SOME n => id n;
          put ",defType=";
          put (definitionType t);
          put ",modifiers=";
@@ -150,7 +175,7 @@ struct
          put "}\n")
 
       and definitionList [] = ()
-        | definitionList (d::rest) = (definitionList rest; indent (); definition d)
+        | definitionList (d::rest) = (definition d; indent (); definitionList rest)
 
       fun program defList =
         (put "[\n";

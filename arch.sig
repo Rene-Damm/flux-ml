@@ -8,6 +8,7 @@ sig
   type access
 
   val newFrame : Temp.label * format list -> frame * access list
+  val newLocal : frame -> Temp.temp
 
 end
 

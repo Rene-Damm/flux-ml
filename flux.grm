@@ -20,11 +20,20 @@ fun listToTuple (x::[]) = x
     | TYPE
     | FIELD
     | OBJECT
+    | LOCAL
     | ABSTRACT
     | IMMUTABLE
     | MUTABLE
     | BUILTIN
     | RETURN
+    | YIELD
+    | IF
+    | ELSE
+    | LOOP
+    | SWITCH
+    | CASE
+    | BREAK
+    | CONTINUE
     | INTEGER of int
     | FLOAT of real
     | STRING of string
@@ -36,13 +45,19 @@ fun listToTuple (x::[]) = x
     | RBRACE
     | LANGLE
     | RANGLE
-    | EQUAL
+    | ASSIGN
+    | COLONASSIGN
     | AND
     | OR
     | PLUS
     | MINUS
     | MUL
     | DIV
+    | MOD
+    | LTEQ
+    | GTEQ
+    | EQ
+    | NEQ
     | DOT
     | COMMA
     | EOF
@@ -50,9 +65,11 @@ fun listToTuple (x::[]) = x
 %left COMMA
 %left OR
 %left AND
-%left DOT
-%left MUL DIV
+%left EQ NEQ
+%left LTEQ GTEQ
+%left MUL DIV MOD
 %left PLUS MINUS
+%left DOT
 
 %nonterm
       program                           of AST.definition list
@@ -66,13 +83,10 @@ fun listToTuple (x::[]) = x
     | modifier_list                     of AST.modifier list
     | modifier                          of AST.modifier
     | type_parameter_list_opt           of AST.definition list
-    | type_parameter_list_inner_opt     of AST.definition list
-    | type_parameter_list               of AST.definition list
-    | type_parameter                    of AST.definition
     | value_parameter_list_opt          of AST.definition list
-    | value_parameter_list_inner_opt    of AST.definition list
-    | value_parameter_list              of AST.definition list
-    | value_parameter                   of AST.definition
+    | parameter_list_inner_opt          of AST.definition list
+    | parameter_list                    of AST.definition list
+    | parameter                         of AST.definition
     | type_expr_opt                     of AST.expression option
     | type_expr                         of AST.expression
     | type_args_opt                     of AST.expression list
@@ -80,9 +94,14 @@ fun listToTuple (x::[]) = x
     | statement_list_opt                of AST.statement list
     | statement_list                    of AST.statement list
     | statement                         of AST.statement
+    | switch_case_block_list_opt        of AST.caseBlock list
+    | switch_case_block_list            of AST.caseBlock list
+    | switch_case_block                 of AST.caseBlock
     | value_expr_opt                    of AST.expression option
     | value_expr                        of AST.expression
-    | value_expr_list                   of AST.expression
+	| name_expr							of AST.expression
+    | tuple_value_expr                  of AST.expression
+    | value_expr_list                   of AST.expression list
     | paren_value_expr                  of AST.expression
     | identifier                        of AST.identifier
 
@@ -104,7 +123,7 @@ program
 
 definition_list_opt
     :                                       ([])
-    | definition_list                       (definition_list)
+    | definition_list                       (List.rev definition_list)
 
 definition_list
     : definition                            ([definition])
@@ -112,9 +131,9 @@ definition_list
 
 definition
     : modifier_list_opt TYPE identifier type_parameter_list_opt value_parameter_list_opt type_expr_opt type_definition_body
-                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = type_definition_body })
+                                            (AST.Definition { region = (TYPEleft, type_definition_bodyright), defType = AST.Type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = SOME identifier, body = type_definition_body })
     | modifier_list_opt non_type_definition_type identifier type_parameter_list_opt value_parameter_list_opt type_expr_opt definition_body
-                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = identifier, body = definition_body })
+                                            (AST.Definition { region = (non_type_definition_typeleft, definition_bodyright), defType = non_type_definition_type, typeParameters = type_parameter_list_opt, valueParameters = value_parameter_list_opt, typeExpr = type_expr_opt, modifiers = modifier_list_opt, name = SOME identifier, body = definition_body })
 
 non_type_definition_type
     : METHOD                                (AST.Method)
@@ -123,16 +142,16 @@ non_type_definition_type
 
 type_definition_body
     : SEMICOLON                             (NONE)
-    | EQUAL type_expr SEMICOLON             (SOME (AST.Expression type_expr))
+    | ASSIGN type_expr SEMICOLON             (SOME (AST.Expression type_expr))
 
 definition_body
     : SEMICOLON                             (NONE)
     | LBRACE statement_list_opt RBRACE      (SOME (AST.Statement statement_list_opt))
-    | EQUAL value_expr SEMICOLON            (SOME (AST.Expression value_expr))
+    | ASSIGN value_expr SEMICOLON            (SOME (AST.Expression value_expr))
 
 modifier_list_opt
     :                                       ([])
-    | modifier_list                         (modifier_list)
+    | modifier_list                         (List.rev modifier_list)
 
 modifier_list
     : modifier                              ([modifier])
@@ -146,45 +165,34 @@ modifier
 
 type_parameter_list_opt
     :                                       ([])
-    | LANGLE type_parameter_list_inner_opt RANGLE
-                                            (type_parameter_list_inner_opt)
-
-type_parameter_list_inner_opt
-    :                                       ([])
-    | type_parameter_list                   (List.rev type_parameter_list)
-
-type_parameter_list
-    : type_parameter                        ([type_parameter])
-    | type_parameter_list COMMA type_parameter  
-                                            (type_parameter::type_parameter_list)
-
-type_parameter
-    : identifier                            (AST.Definition { region = (identifierleft, identifierright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = NONE, name = identifier, body = NONE })
+    | LANGLE parameter_list_inner_opt RANGLE
+                                            (parameter_list_inner_opt)
 
 value_parameter_list_opt
     :                                       ([])
-    | LPAREN value_parameter_list_inner_opt RPAREN
-                                            (value_parameter_list_inner_opt)
+    | LPAREN parameter_list_inner_opt RPAREN
+                                            (parameter_list_inner_opt)
 
-value_parameter_list_inner_opt
+parameter_list_inner_opt
     :                                       ([])
-    | value_parameter_list                  (List.rev value_parameter_list)
+    | parameter_list                        (List.rev parameter_list)
 
-value_parameter_list
-    : value_parameter                       ([value_parameter])
-    | value_parameter_list COMMA value_parameter
-                                            (value_parameter::value_parameter_list)
+parameter_list
+    : parameter								([parameter])
+    | parameter_list COMMA parameter        (parameter::parameter_list)
 
-value_parameter
-    : modifier_list_opt identifier type_expr_opt
-                                            (AST.Definition { region = (case modifier_list_opt of [] => identifierleft | _ => modifier_list_optleft, case type_expr_opt of NONE => identifierright | _ => type_expr_optright), modifiers = modifier_list_opt, defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = type_expr_opt, name = identifier, body = NONE })
+parameter
+    : modifier_list_opt type_expr
+                                            (AST.Definition { region = (case modifier_list_opt of [] => type_exprleft | _ => modifier_list_optleft, type_exprright), modifiers = modifier_list_opt, defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = SOME type_expr, name = NONE, body = NONE })
+    | modifier_list_opt identifier type_expr_opt
+                                            (AST.Definition { region = (case modifier_list_opt of [] => identifierleft | _ => modifier_list_optleft, case type_expr_opt of NONE => identifierright | _ => type_expr_optright), modifiers = modifier_list_opt, defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = type_expr_opt, name = SOME identifier, body = NONE })
 
 type_expr_opt
     :                                       (NONE)
     | COLON type_expr                       (SOME type_expr)
 
 type_expr
-    : identifier type_args_opt              (case type_args_opt of [] => AST.Name identifier | l => AST.Binary { region = (identifierleft, type_args_optright), operator = AST.APPLY, left = AST.Name identifier, right = listToTuple type_args_opt })
+    : name_expr								(name_expr)
     | type_expr AND type_expr               (AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.AND, left = type_expr1, right = type_expr2 })
     | type_expr OR type_expr                (AST.Binary { region = (type_expr1left, type_expr2right), operator = AST.OR, left = type_expr1, right = type_expr2 })
     | LPAREN type_expr RPAREN               (type_expr)
@@ -209,7 +217,31 @@ statement_list
 
 statement
     : RETURN value_expr_opt SEMICOLON       (AST.Return { region = (RETURNleft, SEMICOLONright), value = value_expr_opt })
+    | IF LPAREN value_expr RPAREN statement (AST.If { region = (IFleft, statementright), condition = value_expr, trueBranch = statement, falseBranch = NONE })
+    | IF LPAREN value_expr RPAREN statement ELSE statement
+                                            (AST.If { region = (IFleft, statement2right), condition = value_expr, trueBranch = statement1, falseBranch = SOME statement2 })
+    | SWITCH LPAREN value_expr RPAREN LBRACE switch_case_block_list_opt RBRACE
+                                            (AST.Switch { region = (SWITCHleft, RBRACEright), value = value_expr, branches = switch_case_block_list_opt })
+    | LOCAL identifier COLON type_expr value_expr_opt SEMICOLON
+                                            (AST.Variable (AST.Definition { region = (LOCALleft, SEMICOLONright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = SOME type_expr, name = SOME identifier, body = NONE }))
+    | LOCAL identifier COLON type_expr ASSIGN value_expr SEMICOLON
+                                            (AST.Variable (AST.Definition { region = (LOCALleft, SEMICOLONright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = SOME type_expr, name = SOME identifier, body = SOME (AST.Expression value_expr) }))
+    | LOCAL identifier COLONASSIGN value_expr SEMICOLON
+                                            (AST.Variable (AST.Definition { region = (LOCALleft, SEMICOLONright), modifiers = [], defType = AST.Local, typeParameters = [], valueParameters = [], typeExpr = NONE, name = SOME identifier, body = SOME (AST.Expression value_expr) }))
     | value_expr SEMICOLON                  (AST.ExpressionStatement (value_expr))
+
+switch_case_block_list_opt
+    :                                       ([])
+    | switch_case_block_list                (List.rev switch_case_block_list)
+
+switch_case_block_list
+    : switch_case_block                     ([switch_case_block])
+    | switch_case_block_list switch_case_block
+                                            (switch_case_block::switch_case_block_list)
+
+switch_case_block
+    : CASE value_expr_list COLON statement_list_opt
+                                            (AST.Case { region = (CASEleft, statement_list_optright), values = List.rev value_expr_list, body = statement_list_opt })
 
 value_expr_opt
     :                                       (NONE)
@@ -220,23 +252,36 @@ value_expr
     | INTEGER                               (AST.Integer { region = (INTEGERleft, INTEGERright), value = INTEGER })
     | FLOAT                                 (AST.Float { region = (FLOATleft, FLOATright), value = FLOAT })
     | STRING                                (AST.String { region = (STRINGleft, STRINGright), value = STRING })
-    | identifier                            (AST.Name (identifier))
+    | name_expr								(name_expr)
     | value_expr PLUS value_expr            (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.PLUS, left = value_expr1, right = value_expr2 })
     | value_expr MINUS value_expr           (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.MINUS, left = value_expr1, right = value_expr2 })
     | value_expr MUL value_expr             (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.MUL, left = value_expr1, right = value_expr2 })
     | value_expr DIV value_expr             (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.DIV, left = value_expr1, right = value_expr2 })
-    | value_expr DOT identifier             (AST.Binary { region = (value_exprleft, identifierright), operator = AST.DOT, left = value_expr, right = AST.Name(identifier) })
+    | value_expr MOD value_expr             (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.MOD, left = value_expr1, right = value_expr2 })
+    | value_expr LANGLE value_expr          (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.LT, left = value_expr1, right = value_expr2 })
+    | value_expr RANGLE value_expr          (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.GT, left = value_expr1, right = value_expr2 })
+    | value_expr LTEQ value_expr            (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.LTEQ, left = value_expr1, right = value_expr2 })
+    | value_expr GTEQ value_expr            (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.GTEQ, left = value_expr1, right = value_expr2 })
+    | value_expr EQ value_expr              (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.EQ, left = value_expr1, right = value_expr2 })
+    | value_expr NEQ value_expr             (AST.Binary { region = (value_expr1left, value_expr2right), operator = AST.NEQ, left = value_expr1, right = value_expr2 })
+    | value_expr DOT name_expr              (AST.Binary { region = (value_exprleft, name_exprright), operator = AST.DOT, left = value_expr, right = name_expr })
     | value_expr paren_value_expr           (AST.Binary { region = (value_exprleft, paren_value_exprright), operator = AST.APPLY, left = value_expr, right = paren_value_expr })
+
+name_expr
+    : identifier type_args_opt              (case type_args_opt of [] => AST.Name identifier | l => AST.Binary { region = (identifierleft, type_args_optright), operator = AST.TYPE_APPLY, left = AST.Name identifier, right = listToTuple type_args_opt })
 
 paren_value_expr
     : LPAREN RPAREN                         (AST.Nothing { region = (LPARENleft, RPARENright) })
     | LPAREN value_expr RPAREN              (value_expr)
-    | LPAREN value_expr COMMA value_expr_list RPAREN
-                                            (AST.Binary { region = (LPARENleft, RPARENright), operator = AST.TUPLE, left = value_expr, right = value_expr_list })
+    | LPAREN value_expr COMMA tuple_value_expr RPAREN
+                                            (AST.Binary { region = (LPARENleft, RPARENright), operator = AST.TUPLE, left = value_expr, right = tuple_value_expr })
+tuple_value_expr
+    : value_expr                            (value_expr)
+    | value_expr COMMA tuple_value_expr     (AST.Binary { region = (value_exprleft, tuple_value_exprright), operator = AST.TUPLE, left = value_expr, right = tuple_value_expr })
 
 value_expr_list
-    : value_expr                            (value_expr)
-    | value_expr COMMA value_expr_list      (AST.Binary { region = (value_exprleft, value_expr_listright), operator = AST.TUPLE, left = value_expr, right = value_expr_list })
+    : value_expr                            ([value_expr])
+    | value_expr COMMA value_expr_list      (value_expr::value_expr_list)
 
 identifier
     : ID                                    (AST.Identifier { region = (IDleft, IDright), text = ID })

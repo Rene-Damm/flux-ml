@@ -53,6 +53,10 @@ struct
       (Frame { name = name, args = args, size = !stackSize }, args)
     end
 
+  fun newLocal frame =
+    (*TODO: put temp in frame *)
+    Temp.newTemp ()
+
 end
 
 structure Arch : ARCH = X64Arch

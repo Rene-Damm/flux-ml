@@ -46,7 +46,7 @@ field Name( MyType ) : String;
 // Any types.
 field Value( MyDerivedType | MyOtherDerivedType ) : Float;
 
-// Method are also freely defined, only that they aren't really attached to any single
+// Methods are also freely defined, only that they aren't really attached to any single
 // type. All methods of the same name form a function and the most appropriate
 // method for each function call is selected automatically.
 method DoSomething( Argument : MyType )
@@ -106,6 +106,18 @@ method MyParameterizedMethod< Object >( Object )
 {
 }
 
+// Just like for value arguments, the most appropriate implementation is selected based on
+// the actual type arguments supplied to a call (only that this happens at compile time, unlike
+// with value arguments).
+method Random< Integer >() : Integer
+{
+	return 123;
+}
+method Random< Float >() : Float
+{
+	return 123.0;
+}
+
 // Type aliases may have parameters, too. Like this one from the "standard library".
 object Nothing;
 type Optional< Object > = Object | Nothing;
@@ -140,6 +152,9 @@ invariant method ListCanNeverContain12( List< Integer > ) : Boolean
 ## Differences/Deviations to/from "The Real Thing"
 
 - Uses a lexer and thus tokens. Means there's reserved words and no context dependence.
+- Is case-*sensitive*. The "real" thing isn't.
+- Can handle only a restricted subset of type *argument* expressions. Type expressions cannot be applied to arbitrary values; can only be applied to identifiers.
+  * This restriction is to allow the syntax to be parsed with LALR(1).
 - Does not support modules.
 - In fact, does not support more than a single compilation unit.
 

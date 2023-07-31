@@ -10,7 +10,7 @@ struct
     | TupleType         of ty * ty
     | UnionType         of ty * ty
     | IntersectionType  of ty * ty
-    | ParameterizedType of ty * ty
+    | ParameterizedType of ty * ty (* Tuple of variable types plus base type that uses them. *)
     | InstancedType     of ty * ty
     | MutableType       of ty
     | ImmutableType     of ty
@@ -33,6 +33,10 @@ struct
 
   fun isFunctionType (MethodType (_, _)) = true
     | isFunctionType (ClosureType (_, _)) = true
+    | isFunctionType (ParameterizedType (_, MethodType (_, _))) = true
+    | isFunctionType (ParameterizedType (_, ClosureType (_, _))) = true
+    | isFunctionType (InstancedType (_, MethodType (_, _))) = true
+    | isFunctionType (InstancedType (_, ClosureType (_, _))) = true
     | isFunctionType _ = false
 
   fun getLeftOperandType (MethodType (l, _)) = l
@@ -40,8 +44,8 @@ struct
     | getLeftOperandType (TupleType (l, _)) = l
     | getLeftOperandType (UnionType (l, _)) = l
     | getLeftOperandType (IntersectionType (l, _)) = l
-    | getLeftOperandType (ParameterizedType (l, _)) = l
-    | getLeftOperandType (InstancedType (l, _)) = l
+    | getLeftOperandType (ParameterizedType (_, r)) = getLeftOperandType r
+    | getLeftOperandType (InstancedType (_, r)) = getLeftOperandType r
     | getLeftOperandType _ = raise Utils.ShouldNotGetHere
 
   fun getRightOperandType (MethodType (_, r)) = r
@@ -49,8 +53,8 @@ struct
     | getRightOperandType (TupleType (_, r)) = r
     | getRightOperandType (UnionType (_, r)) = r
     | getRightOperandType (IntersectionType (_, r)) = r
-    | getRightOperandType (ParameterizedType (_, r)) = r
-    | getRightOperandType (InstancedType (_, r)) = r
+    | getRightOperandType (ParameterizedType (_, r)) = getRightOperandType r
+    | getRightOperandType (InstancedType (_, r)) = getRightOperandType r
     | getRightOperandType _ = raise Utils.ShouldNotGetHere
 
   fun toString (RootType) = "Object"
