@@ -31,6 +31,12 @@ builtin method Random< Float >() : Float;
 builtin method \+( Left : String, Right : String ) : String;
 builtin method \+( mutable MutableString, String ) : mutable MutableString;
 
+builtin method \+( Left : Integer, Right : Integer ) : Integer;
+builtin method \-( Left : Integer, Right : Integer ) : Integer;
+builtin method \*( Left : Integer, Right : Integer ) : Integer;
+builtin method \/( Left : Integer, Right : Integer ) : Integer;
+builtin method \%( Left : Integer, Right : Integer ) : Integer;
+
 builtin method Default< Object >() : Object;
 
 method Hello() : String

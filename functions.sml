@@ -35,22 +35,56 @@ struct
     else DispatchNode { methodType = nodeType, children = goThroughChildren nodeChildren, label = nodeLabel, method = nodeMethod }
   end
 
-  fun lookupDispatchNode (node as DispatchNode { methodType = methodType, children = children, label = _, method = _ }, argType) =
+  (* Given a dispatch tree of methods and a type argument type (optional) and value argument type, find the method
+     to invoke. Return its DispatchNode. *)
+  fun lookupDispatchNode (node as DispatchNode { methodType = methodType, children = children, label = _, method = _ }, typeArgType, valueArgType) =
     let
-      val methodArgType = Types.getLeftOperandType methodType
+      
+      fun doIt () =
+        let
+          val _ = Utils.assert "Method type is function type (1)" (Types.isFunctionType methodType)
 
-      fun lookupChild [] = NONE
-        | lookupChild (child::rest) =
-            case lookupDispatchNode (child, argType)
-              of NONE => lookupChild rest
-               | r => r
+          (* If the method type is parameterized, apply the given type arguments first (which may be none). *)
+          val methodType' =
+            case (methodType, typeArgType)
+              of (parameterizedType as Types.ParameterizedType (vars, base), SOME typeArgs) =>
+                  let
+                    val instancedType = Types.instantiate (parameterizedType, typeArgs)
+                  in
+                    Types.applyInstantiation instancedType
+                  end
+               | (_, _) => methodType
+
+          val _ = Utils.assert "Method type is function type (2)" (Types.isFunctionType methodType')
+
+          (* If the method type is still parameterized, infer any remaining type parameters. *)
+          val methodType'' = 
+            if Types.isParameterizedType methodType'
+            then raise Utils.NotImplemented (*TODO: infer type argument *)
+            else methodType'
+
+          val _ = Utils.assert "Method type is function type (3)" (Types.isFunctionType methodType'')
+
+          val methodArgType = Types.getLeftOperandType methodType''
+
+          fun lookupChild [] = NONE
+            | lookupChild (child::rest) =
+                case lookupDispatchNode (child, typeArgType, valueArgType)
+                  of NONE => lookupChild rest
+                   | r => r
+        in
+          if Types.isSubtype (valueArgType, methodArgType)
+          then
+            case lookupChild children
+              of SOME n => SOME n
+               | NONE => SOME node
+          else NONE
+        end
+
     in
-      if Types.isSubtype (argType, methodArgType)
-      then
-        case lookupChild children
-          of SOME n => SOME n
-           | NONE => SOME node
-      else NONE
+      doIt () handle
+          Types.TooManyArgumentsInInstantation => NONE
+        | Types.TypeConstraintNotMetInInstantiation _ => NONE
     end
 
   fun getDispatchNodeChildren (DispatchNode { methodType = _, children = c, label = _, method = _ }) = c

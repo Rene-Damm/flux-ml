@@ -65,6 +65,9 @@ struct
   fun getDefinitionValueParameters (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = v, typeExpr = _, name = _, body = _ }) = v
   fun getDefinitionBody (Definition { region = _, modifiers = _, defType = _, typeParameters = _, valueParameters = _, typeExpr = _, name = _, body = b }) = b
 
+  fun hasAbstractModifier def = List.exists (fn m => case m of Abstract _ => true | _ => false) (getDefinitionModifiers def)
+  fun hasBuiltinModifier def = List.exists (fn m => case m of Builtin _ => true | _ => false) (getDefinitionModifiers def)
+
   fun getIdentifierText (Identifier { region = _, text = t }) = t
 
   fun print stream ast =
@@ -159,7 +162,8 @@ struct
         (put "DEF{";
          put "name=";
          case n
-           of SOME n => id n;
+           of SOME n => id n
+            | NONE => ();
          put ",defType=";
          put (definitionType t);
          put ",modifiers=";

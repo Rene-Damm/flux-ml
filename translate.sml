@@ -11,7 +11,7 @@ struct
 
   datatype variable = VAR of { location: Tree.expr, typ: Types.ty }
 
-  datatype method = METHOD of { definition: AST.definition, venv: variable Symbol.table, tenv: Types.ty Symbol.table }
+  datatype method = METHOD of { definition: AST.definition, builtin: bool, venv: variable Symbol.table, tenv: Types.ty Symbol.table }
 
   (* Translates a *SINGLE* AST into a list of fragments.
    * No support for translating a program with multiple units. *)
@@ -322,7 +322,7 @@ struct
         val (valueArgType, venv') =
           case valueArgs
             of [] => (nothingType, venvGlobal)
-             | _ => processValueArgs venvGlobal tenv valueArgs
+             | _ => processValueArgs venvGlobal tenv' valueArgs
 
         val resultType = case (AST.getDefinitionTypeExpr def)
                            of SOME e => let val (t, _) = translateTypeExpr (e, tenv') in t end
@@ -333,7 +333,7 @@ struct
                             | _ => Types.ParameterizedType (typeArgType, Types.MethodType (valueArgType, resultType))
 
         val label = Temp.newNamedLabel (Symbol.toString name)
-        val method = METHOD { definition = def, venv = venv', tenv = tenv' }
+        val method = METHOD { definition = def, venv = venv', tenv = tenv', builtin = AST.hasBuiltinModifier def  }
 
       in
         case Symbol.lookup (fenv, name)
@@ -362,7 +362,7 @@ struct
     fun translateFunction (_, (name, dispatchTree)) =
       let
 
-        fun processNode (Functions.DispatchNode { methodType = methodType, children = children, label = label, method = METHOD { definition = method, venv = venv, tenv = tenv } }) =
+        fun processNode (Functions.DispatchNode { methodType = methodType, children = children, label = label, method = METHOD { definition = method, venv = venv, tenv = tenv, builtin = isBuiltin } }) =
           let 
 
             val methodResultType = (Types.getRightOperandType methodType)
@@ -409,7 +409,7 @@ struct
                              val (_, dispatchTree) = case Symbol.lookup (fenv, (Symbol.create (AST.getIdentifierText id)))
                                                        of SOME node => node
                                                         | NONE => raise Utils.NotImplemented
-                             val dispatchNode = case Functions.lookupDispatchNode (dispatchTree, rightType)
+                             val dispatchNode = case Functions.lookupDispatchNode (dispatchTree, NONE, rightType)
                                                   of SOME node => node
                                                    | NONE => raise Utils.NotImplemented
                              val resultType = Types.getRightOperandType (Functions.getDispatchNodeType dispatchNode)
@@ -433,7 +433,7 @@ struct
                            case Symbol.lookup (fenv, symbol)
                              of SOME (_, dispatchTree) =>
                                 let 
-                                  val dispatchNode = Functions.lookupDispatchNode (dispatchTree, nothingType)
+                                  val dispatchNode = Functions.lookupDispatchNode (dispatchTree, SOME t, nothingType)
                                 in
                                   case dispatchNode
                                     of SOME d => (Tree.CALL (Functions.getDispatchNodeLabel d, [nothingValue]), Types.getRightOperandType (Functions.getDispatchNodeType d))
@@ -450,25 +450,32 @@ struct
                     case operator
                       of AST.TUPLE => raise Utils.NotImplemented
                        | _ =>
-                           if (isBuiltinNumericType leftType) andalso (isBuiltinNumericType rightType)
+                          let 
+                            val functionName = case operator
+                                                 of AST.PLUS => Env.builtinPlus
+                                                  | AST.MOD => Env.builtinModulo
+                                                  | _ => raise Utils.NotImplemented
+                            val function = case Symbol.lookup (fenv, functionName)
+                                             of SOME (_, f) => f
+                                              | _ => raise Argh ("undefined operator")
+                            val node = Functions.lookupDispatchNode (function, NONE, Types.TupleType (leftType, rightType))
+                          in
+                            case node
+                              of SOME (Functions.DispatchNode { methodType = methodType, children = _, label = label, method = _ }) =>
+                                  (*TODO: builtin*)
+                                  (Tree.CALL (label, [leftTree, rightTree]), Types.getRightOperandType methodType)
+                               | NONE => (Utils.println (Types.toString leftType); Utils.println (Types.toString rightType); raise Argh "no matching implementation for operator")
+                          end
+                          (*
+                          if (isBuiltinNumericType leftType) andalso (isBuiltinNumericType rightType)
                           then
+                            (* Replace call to builtin numeric operator with direct expression.
+                               NOTE: This disallows extending or overriding them in any way. *)
                             case operator
-                              of _ => raise Utils.NotImplemented (*TODO replace call with direct expression tree*)
+                              of AST.MOD => raise Utils.NotImplemented
+                               | _ => raise Utils.NotImplemented
                           else
-                            let 
-                              val functionName = case operator
-                                                   of AST.PLUS => Env.builtinPlus
-                                                    | _ => raise Utils.NotImplemented
-                              val function = case Symbol.lookup (fenv, functionName)
-                                               of SOME (_, f) => f
-                                                | _ => raise Argh ("undefined operator")
-                              val node = Functions.lookupDispatchNode (function, Types.TupleType (leftType, rightType))
-                            in
-                              case node
-                                of SOME (Functions.DispatchNode { methodType = methodType, children = _, label = label, method = _ }) =>
-                                    (Tree.CALL (label, [leftTree, rightTree]), Types.getRightOperandType methodType)
-                                 | NONE => raise Argh "no matching implementation for operator"
-                            end
+                            *)
                   end
               | translateExpr venv (AST.Name id) =
                   let
@@ -482,7 +489,7 @@ struct
                            case Symbol.lookup (fenv, symbol)
                              of SOME (_, dispatchTree) =>
                                 let 
-                                  val dispatchNode = Functions.lookupDispatchNode (dispatchTree, nothingType)
+                                  val dispatchNode = Functions.lookupDispatchNode (dispatchTree, NONE, nothingType)
                                 in
                                   case dispatchNode
                                     of SOME d => (Tree.CALL (Functions.getDispatchNodeLabel d, [nothingValue]), Types.getRightOperandType (Functions.getDispatchNodeType d))

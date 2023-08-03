@@ -20,7 +20,7 @@ struct
                 | LABEL of Temp.label
                 | NOP
 
-       and binop = PLUS | MINUS | MUL | DIV | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
+       and binop = PLUS | MINUS | MUL | DIV | MOD | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
 
        and relop = EQ | NE | LT | GT | GE | ULT | ULE | UGT | UGE
 
