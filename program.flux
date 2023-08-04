@@ -36,6 +36,8 @@ builtin method \-( Left : Integer, Right : Integer ) : Integer;
 builtin method \*( Left : Integer, Right : Integer ) : Integer;
 builtin method \/( Left : Integer, Right : Integer ) : Integer;
 builtin method \%( Left : Integer, Right : Integer ) : Integer;
+builtin method \==( Left : Integer, Right : Integer ) : Boolean;
+builtin method \!=( Left : Integer, Right : Integer ) : Boolean;
 
 builtin method Default< Object >() : Object;
 
@@ -46,15 +48,15 @@ method Hello() : String
 
 method Subject() : String
 {
-	local N := Random< Integer > % 5;
-	switch ( N )
-	{
-		case 0: return " World!";
-		case 1: return " Joe!";
-		case 2: return " Afterlife!";
-		case 3: return " and Goodbye!";
-		case 4: return " Unknown!";
-	}
+    local N := Random< Integer > % 5;
+    switch ( N )
+    {
+        case 0: return " World!";
+        case 1: return " Joe!";
+        case 2: return " Afterlife!";
+        case 3: return " and Goodbye!";
+        case 4: return " Unknown!";
+    }
 }
 
 method Main()

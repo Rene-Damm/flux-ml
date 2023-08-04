@@ -48,6 +48,7 @@ val strStartPos = ref 0
 <INITIAL> "continue"                            => (Tokens.CONTINUE(yypos, yypos + 8));
 <INITIAL> [0-9]+                                => (Tokens.INTEGER(Option.valOf(Int.fromString yytext), yypos, yypos + size yytext));
 <INITIAL> [A-Za-z_][A-Za-z0-9_]*!?              => (Tokens.ID(yytext, yypos, yypos + size yytext));
+<INITIAL> \\[!=]=                               => (Tokens.ID(String.substring (yytext, 1, 2), yypos + 1, yypos + 3));
 <INITIAL> \\[+\-*\/%]                           => (Tokens.ID(String.substring (yytext, 1, 1), yypos + 1, yypos + 2));
 <INITIAL> ";"                                   => (Tokens.SEMICOLON(yypos, yypos + 1));
 <INITIAL> ":="                                  => (Tokens.COLONASSIGN(yypos, yypos + 2));

@@ -51,7 +51,7 @@ field Value( MyDerivedType | MyOtherDerivedType ) : Float;
 // method for each function call is selected automatically.
 method DoSomething( Argument : MyType )
 {
-	Print( "Foo" );
+    Print( "Foo" );
 }
 
 // Type annotations are done with ": Type". However, if a name and a type is expected
@@ -65,34 +65,34 @@ method AlsoDoSomething( MyType )
 // has both a mutable and immutable variant.
 method DoSomethingElse( mutable MyType )
 {
-	MyType.Name = "Charles";
+    MyType.Name = "Charles";
 }
 
 // Loops are expressed using [Sather](https://www.gnu.org/software/sather/)-style iterators.
 method SomethingWithALoop()
 {
-	// There's no `for` or `while` or other iteration statement.
-	// There's just loops that are driven by iterators. Arbitrarily many of them.
-	loop
-	{
-		// := is assignment with type inference.
-		local I := 0.UpTo!( 10 ); // Like in Sather, iterator methods are suffixed with `!`.
+    // There's no `for` or `while` or other iteration statement.
+    // There's just loops that are driven by iterators. Arbitrarily many of them.
+    loop
+    {
+        // := is assignment with type inference.
+        local I := 0.UpTo!( 10 ); // Like in Sather, iterator methods are suffixed with `!`.
 
-		Print( I.To< String > );
-	}
+        Print( I.To< String > );
+    }
 }
 
 // You can define your own iterators.
 iterator method EverySecondElement!< Object >( List< Object > ) : Object
 {
-	loop
-	{
-		local I := 0.Up!; // Just infinitely counts up from 0.
-		local Value := List.Elements!; // Yields every element in List.
+    loop
+    {
+        local I := 0.Up!; // Just infinitely counts up from 0.
+        local Value := List.Elements!; // Yields every element in List.
 
-		if ( I % 2 == 0 )
-			yield Value;
-	}
+        if ( I % 2 == 0 )
+            yield Value;
+    }
 }
 
 // Types and methods can be fully parameterized. Unlike in many other languages, however,
@@ -111,11 +111,11 @@ method MyParameterizedMethod< Object >( Object )
 // with value arguments).
 method Random< Integer >() : Integer
 {
-	return 123;
+    return 123;
 }
 method Random< Float >() : Float
 {
-	return 123.0;
+    return 123.0;
 }
 
 // Type aliases may have parameters, too. Like this one from the "standard library".
@@ -126,26 +126,26 @@ type Optional< Object > = Object | Nothing;
 // you'd expect it to.
 method SomeMethod()
 {
-	Print( "bar" );
+    Print( "bar" );
 }
 before method SomeMethod()
 {
-	Print( "foo" );
+    Print( "foo" );
 }
 
 // Calling SomeMethod() prints `foobar`.
 
 // Finally, you can attach pre- and post-conditions to methods.
 method MethodWithConditions( Integer, mutable List< Integer > )
-	pre Integer >= 12
-	post List.Contains( Integer )
+    pre Integer >= 12
+    post List.Contains( Integer )
 {
 }
 
 // And define invariants.
 invariant method ListCanNeverContain12( List< Integer > ) : Boolean
 {
-	return !List.Contains( 12 );
+    return !List.Contains( 12 );
 }
 ```
 

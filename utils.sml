@@ -29,6 +29,11 @@ struct
     | zip _ [] _ = []
     | zip _ _ [] = []
 
+  fun zip3 func (a::restA) (b::restB) (c::restC) = (func (a, b, c))::(zip3 func restA restB restC)
+    | zip3 _ [] _ _ = []
+    | zip3 _ _ [] _ = []
+    | zip3 _ _ _ [] = []
+
   (* Zips and folds two lists at the same time. *)
   fun zipFold func c (a::restA) (b::restB) = zipFold func (func (c, a, b)) restA restB
     | zipFold _ c [] _ = c

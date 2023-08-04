@@ -359,6 +359,26 @@ struct
 
     fun genCallExpr (typeArg, valueArg) = raise Utils.NotImplemented
 
+    fun genBinaryExpr (operator, leftType, leftTree, rightType, rightTree) =
+      let 
+        val functionName = case operator
+                             of AST.PLUS => Env.builtinPlus
+                              | AST.MOD => Env.builtinModulo
+                              | AST.EQ => Env.builtinEqual
+                              | AST.NEQ => Env.builtinNotEqual
+                              | _ => raise Utils.NotImplemented
+        val function = case Symbol.lookup (fenv, functionName)
+                         of SOME (_, f) => f
+                          | _ => raise Argh ("undefined operator")
+        val node = Functions.lookupDispatchNode (function, NONE, Types.TupleType (leftType, rightType))
+      in
+        case node
+          of SOME (Functions.DispatchNode { methodType = methodType, children = _, label = label, method = _ }) =>
+              (*TODO: builtin*)
+              (Tree.CALL (label, [leftTree, rightTree]), Types.getRightOperandType methodType)
+           | NONE => (Utils.println (Types.toString leftType); Utils.println (Types.toString rightType); raise Argh "no matching implementation for operator")
+      end
+
     fun translateFunction (_, (name, dispatchTree)) =
       let
 
@@ -447,35 +467,7 @@ struct
                     val (leftTree, leftType) = translateExpr venv left
                     val (rightTree, rightType) = translateExpr venv right
                   in
-                    case operator
-                      of AST.TUPLE => raise Utils.NotImplemented
-                       | _ =>
-                          let 
-                            val functionName = case operator
-                                                 of AST.PLUS => Env.builtinPlus
-                                                  | AST.MOD => Env.builtinModulo
-                                                  | _ => raise Utils.NotImplemented
-                            val function = case Symbol.lookup (fenv, functionName)
-                                             of SOME (_, f) => f
-                                              | _ => raise Argh ("undefined operator")
-                            val node = Functions.lookupDispatchNode (function, NONE, Types.TupleType (leftType, rightType))
-                          in
-                            case node
-                              of SOME (Functions.DispatchNode { methodType = methodType, children = _, label = label, method = _ }) =>
-                                  (*TODO: builtin*)
-                                  (Tree.CALL (label, [leftTree, rightTree]), Types.getRightOperandType methodType)
-                               | NONE => (Utils.println (Types.toString leftType); Utils.println (Types.toString rightType); raise Argh "no matching implementation for operator")
-                          end
-                          (*
-                          if (isBuiltinNumericType leftType) andalso (isBuiltinNumericType rightType)
-                          then
-                            (* Replace call to builtin numeric operator with direct expression.
-                               NOTE: This disallows extending or overriding them in any way. *)
-                            case operator
-                              of AST.MOD => raise Utils.NotImplemented
-                               | _ => raise Utils.NotImplemented
-                          else
-                            *)
+                    genBinaryExpr (operator, leftType, leftTree, rightType, rightTree)
                   end
               | translateExpr venv (AST.Name id) =
                   let
@@ -510,17 +502,64 @@ struct
                     then raise Argh ("Incorrect return type")
                     else
                       case exp
-                        of SOME e => (Tree.SEQ (Tree.MOVE (Tree.TEMP returnValueLabel, e), Tree.JUMP epiloqueLabel), venv)
+                        of SOME e => (Tree.SEQ [Tree.MOVE (Tree.TEMP returnValueLabel, e), Tree.JUMP epiloqueLabel], venv)
                          | NONE => (Tree.JUMP epiloqueLabel, venv)
                   end
               | translateStmt venv (AST.ExpressionStatement(expr)) =
                   let
                     val (tree, typ) = translateExpr venv expr
                   in
-                    (Tree.EXPR (tree), venv)
+                    (Tree.EXPR tree, venv)
                   end
               | translateStmt venv (AST.If { region = _, condition = c, trueBranch = t, falseBranch = f}) = raise Utils.NotImplemented
-              | translateStmt venv (AST.Switch { region = _, value = v, branches = b }) = raise Utils.NotImplemented
+              | translateStmt venv (AST.Switch { region = _, value = v, branches = branches }) =
+                  let
+
+                    val (valTree, valType) = translateExpr venv v
+                    val temp = Tree.TEMP (Arch.newLocal frame)
+                    val endLabel = Temp.newLabel ()
+
+                    (* We need labels for the indidividual blocks so that we can jump to them from the previous block.
+                       However, we don't need that for the first one. And the last one should just jump to the end label. *)
+                    val caseLabels = map (fn _ => Temp.newLabel ()) branches
+                    val caseLabels' = List.concat [List.tl caseLabels, [endLabel]]
+
+                    fun translateCaseBlock (label, AST.Case { region = _, values = values, body = body }, nextCaseBlockLabel) =
+                      let
+                        val bodyLabel = Temp.newLabel ()
+                        val (bodyTree, _) = translateStmts venv body
+
+                        fun caseValue v =
+                          let
+                            val (tree, typ) = translateExpr venv v
+                            (*TODO: check we get a Boolean back here *)
+                            val (eqTree, _) = genBinaryExpr (AST.EQ, valType, temp, typ, tree)
+                          in
+                            (* Note that we do NOT check whether the type of the case value is a subtype of the value
+                               type used in the switch statement. All that we require is that there is an equality function
+                               defined for the pair. *)
+                            Tree.CJUMP (Tree.EQ, eqTree, Tree.TRUE, bodyLabel, nextCaseBlockLabel)
+                          end
+
+                      in
+                        Tree.SEQ (List.concat [
+                           [Tree.LABEL label],
+                           map caseValue values,
+                           [Tree.LABEL bodyLabel],
+                           [bodyTree]
+                        ])
+                      end
+
+                  in
+                    (Tree.SEQ (List.concat [
+                       (* Assign value to temp so that we don't compute it over and over.
+                          There's probably potential here for skipping the temp for certain expressions. *)
+                       [Tree.MOVE (temp, valTree)],
+                       Utils.zip3 translateCaseBlock caseLabels branches caseLabels',
+                       [Tree.LABEL endLabel]
+                     ]),
+                     venv)
+                  end
               | translateStmt venv (AST.Variable d) =
                   let
                     val name = createDefinitionSymbol d
@@ -564,7 +603,7 @@ struct
                     val (left, venv') = translateStmt venv stmt
                     val (right, venv'') = translateStmts venv' rest
                   in
-                    (Tree.SEQ (left, right), venv'')
+                    (Tree.SEQ [left, right], venv'')
                   end
 
             val body =

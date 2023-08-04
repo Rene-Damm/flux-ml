@@ -11,6 +11,8 @@ sig
   val builtinPlus : Symbol.symbol
   val builtinMinus : Symbol.symbol
   val builtinModulo : Symbol.symbol
+  val builtinEqual : Symbol.symbol
+  val builtinNotEqual : Symbol.symbol
   val builtinDefault : Symbol.symbol
 
   type typeTable = Types.ty Symbol.table
@@ -37,6 +39,8 @@ struct
   val builtinPlus = Symbol.create "+"
   val builtinMinus = Symbol.create "-"
   val builtinModulo = Symbol.create "%"
+  val builtinEqual = Symbol.create "=="
+  val builtinNotEqual = Symbol.create "!="
   val builtinDefault = Symbol.create "Default"
 
   fun dumpTypes(table: typeTable, stream) =

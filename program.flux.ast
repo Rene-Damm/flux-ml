@@ -47,6 +47,12 @@ DEF{name=Object,defType=TYPE,modifiers=ABSTRACT,type=,typeParms=,valueParms=,bod
   DEF{name=%,defType=METHOD,modifiers=BUILTIN,type=Integer,typeParms=,valueParms=DEF{name=Left,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
   DEF{name=Right,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
   ,body=}
+  DEF{name===,defType=METHOD,modifiers=BUILTIN,type=Boolean,typeParms=,valueParms=DEF{name=Left,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
+  DEF{name=Right,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
+  ,body=}
+  DEF{name=!=,defType=METHOD,modifiers=BUILTIN,type=Boolean,typeParms=,valueParms=DEF{name=Left,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
+  DEF{name=Right,defType=VAR,modifiers=,type=Integer,typeParms=,valueParms=,body=}
+  ,body=}
   DEF{name=Default,defType=METHOD,modifiers=BUILTIN,type=Object,typeParms=DEF{name=Object,defType=VAR,modifiers=,type=,typeParms=,valueParms=,body=}
   ,valueParms=,body=}
   DEF{name=Hello,defType=METHOD,modifiers=,type=String,typeParms=,valueParms=,body=[RETURN{e="Hello"}]}
