@@ -1,149 +1,155 @@
-PROC .%137[
+PROC ._mod10[
   body=[
     NOP
       ];
-  retVal=temp131]
+  retVal=temp20]
 
-PROC ._minus134[
+PROC ._minus7[
   body=[
     NOP
       ];
-  retVal=temp132]
+  retVal=temp21]
 
-PROC ._div136[
+PROC ._div9[
   body=[
     NOP
       ];
-  retVal=temp133]
+  retVal=temp22]
 
-PROC ._plus131[
+PROC ._plus4[
   body=[
     NOP
       ];
-  retVal=temp134]
+  retVal=temp23]
 
-PROC ._plus133[
+PROC ._plus6[
   body=[
     NOP
       ];
-  retVal=temp135]
+  retVal=temp24]
 
-PROC ._plus132[
+PROC ._plus5[
   body=[
     NOP
       ];
-  retVal=temp136]
+  retVal=temp25]
 
-PROC ._mul135[
+PROC ._mul8[
   body=[
     NOP
       ];
-  retVal=temp137]
+  retVal=temp26]
 
-PROC .!=139[
+PROC ._not_eq12[
   body=[
     NOP
       ];
-  retVal=temp138]
+  retVal=temp27]
 
-PROC .==138[
+PROC ._eq_eq11[
   body=[
     NOP
       ];
-  retVal=temp139]
+  retVal=temp28]
 
-PROC .Random129[
+PROC .Random2[
   body=[
     NOP
       ];
-  retVal=temp140]
+  retVal=temp29]
 
-PROC .Random130[
+PROC .Random3[
   body=[
     NOP
       ];
-  retVal=temp141]
+  retVal=temp30]
 
-PROC .Main143[
+PROC .Main16[
   body=[
-    CALL(Print128,CALL(_plus131,CALL(Hello141,NOTHING),CALL(Subject142,NOTHING)))
+    [
+      CALL(Print1,CALL(_plus4,CALL(Hello14,NOTHING),CALL(Subject15,NOTHING)));
+      LABEL Main_epilogue28    ]
       ];
   retVal=NONE]
 
-PROC .Subject142[
+PROC .Subject15[
   body=[
     [
-      CALL(%137,CALL(Random129,NOTHING),5);
       [
-        MOVE(temp145,temp144);
+        CALL(_mod10,CALL(Random2,NOTHING),5);
         [
-          LABEL label158;
-          CJUMP(EQ,CALL(==138,temp145,0),TRUE,label163,label159);
-          LABEL label163;
+          MOVE(temp34,temp33);
           [
-            MOVE(temp143,string164);
-            JMP Subject_epilogue156          ]        ];
-        [
-          LABEL label159;
-          CJUMP(EQ,CALL(==138,temp145,1),TRUE,label165,label160);
-          LABEL label165;
+            LABEL label31;
+            CJUMP(EQ,CALL(_eq_eq11,temp34,0),TRUE,label36,label32);
+            LABEL label36;
+            [
+              MOVE(temp32,string37);
+              JMP Subject_epilogue29            ]          ];
           [
-            MOVE(temp143,string166);
-            JMP Subject_epilogue156          ]        ];
-        [
-          LABEL label160;
-          CJUMP(EQ,CALL(==138,temp145,2),TRUE,label167,label161);
-          LABEL label167;
+            LABEL label32;
+            CJUMP(EQ,CALL(_eq_eq11,temp34,1),TRUE,label38,label33);
+            LABEL label38;
+            [
+              MOVE(temp32,string39);
+              JMP Subject_epilogue29            ]          ];
           [
-            MOVE(temp143,string168);
-            JMP Subject_epilogue156          ]        ];
-        [
-          LABEL label161;
-          CJUMP(EQ,CALL(==138,temp145,3),TRUE,label169,label162);
-          LABEL label169;
+            LABEL label33;
+            CJUMP(EQ,CALL(_eq_eq11,temp34,2),TRUE,label40,label34);
+            LABEL label40;
+            [
+              MOVE(temp32,string41);
+              JMP Subject_epilogue29            ]          ];
           [
-            MOVE(temp143,string170);
-            JMP Subject_epilogue156          ]        ];
-        [
-          LABEL label162;
-          CJUMP(EQ,CALL(==138,temp145,4),TRUE,label171,label157);
-          LABEL label171;
+            LABEL label34;
+            CJUMP(EQ,CALL(_eq_eq11,temp34,3),TRUE,label42,label35);
+            LABEL label42;
+            [
+              MOVE(temp32,string43);
+              JMP Subject_epilogue29            ]          ];
           [
-            MOVE(temp143,string172);
-            JMP Subject_epilogue156          ]        ];
-        LABEL label157      ]    ]
+            LABEL label35;
+            CJUMP(EQ,CALL(_eq_eq11,temp34,4),TRUE,label44,label30);
+            LABEL label44;
+            [
+              MOVE(temp32,string45);
+              JMP Subject_epilogue29            ]          ];
+          LABEL label30        ]      ];
+      LABEL Subject_epilogue29    ]
       ];
-  retVal=temp143]
+  retVal=temp32]
 
-PROC .Default140[
+PROC .Default13[
   body=[
     NOP
       ];
-  retVal=temp146]
+  retVal=temp35]
 
-PROC .Hello141[
+PROC .Hello14[
   body=[
     [
-      MOVE(temp147,string175);
-      JMP Hello_epilogue174    ]
+      [
+        MOVE(temp36,string48);
+        JMP Hello_epilogue47      ];
+      LABEL Hello_epilogue47    ]
       ];
-  retVal=temp147]
+  retVal=temp36]
 
-PROC .Print128[
+PROC .Print1[
   body=[
     NOP
       ];
   retVal=NONE]
 
-STRING .string168 " Afterlife!"
+STRING .string41 " Afterlife!"
 
-STRING .string172 " Unknown!"
+STRING .string45 " Unknown!"
 
-STRING .string164 " World!"
+STRING .string37 " World!"
 
-STRING .string175 "Hello"
+STRING .string48 "Hello"
 
-STRING .string170 " and Goodbye!"
+STRING .string43 " and Goodbye!"
 
-STRING .string166 " Joe!"
+STRING .string39 " Joe!"
 

@@ -24,6 +24,9 @@ struct
            | #"-" => "_minus"
            | #"/" => "_div"
            | #"*" => "_mul"
+           | #"%" => "_mod"
+           | #"=" => "_eq"
+           | #"!" => "_not"
            | _ => Char.toString ch
       val name' = String.translate replaceChar name
     in

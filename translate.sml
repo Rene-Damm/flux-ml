@@ -610,11 +610,18 @@ struct
               case (AST.getDefinitionBody method)
                 of SOME (AST.Expression (e)) => raise Utils.NotImplemented
                  | SOME (AST.Statement ([])) => Tree.NOP
-                 | SOME (AST.Statement (l)) => let val (t, _) = translateStmts venv l in t end
+                 | SOME (AST.Statement (l)) =>
+                    let
+                      val (t, _) = translateStmts venv l
+                    in
+                      (*TODO: emit epiloque *)
+                      Tree.SEQ [t, Tree.LABEL epiloqueLabel]
+                    end
                  | _ => Tree.NOP
 
           in
-            (*TODO: for builtin methods, use a predefined label and don't emit PROC entries *)
+            (*TODO: for builtin methods, use a predefined label and don't emit PROC entries
+                    or......... what about representing builtins in Tree code? *)
             PROC { label = label, body = body, frame = frame, epiloque = epiloqueLabel, returnValue = if hasReturnValue then SOME returnValueLabel else NONE }::(List.concat (map processNode children))
           end
       in
