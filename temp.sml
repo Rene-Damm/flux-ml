@@ -1,3 +1,19 @@
+signature TEMP =
+sig
+
+  type temp = Symbol.symbol
+  type label = Symbol.symbol
+
+  val newTemp : unit -> temp
+  val newLabel : unit -> label
+  val newNamedLabel : string -> label
+  val isSameLabel : label * label -> bool
+
+  val tempToString : temp -> string
+  val labelToString : label -> string
+
+end
+
 structure Temp : TEMP =
 struct
 
@@ -35,6 +51,8 @@ struct
     end
 
   fun newLabel () = newNamedLabel "label"
+
+  fun isSameLabel (a, b) = Symbol.isSame (a, b)
 
   fun labelToString label = Symbol.toString label
   fun tempToString temp = Symbol.toString temp

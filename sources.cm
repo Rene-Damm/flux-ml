@@ -7,6 +7,7 @@ $/ml-yacc-lib.cm
 arch.sig
 arch.x64.sml
 ast.sml
+cflow.sml
 diagnostics.sml
 env.sml
 functions.sml
@@ -15,7 +16,6 @@ parse.sml
 pprint.sml
 source.sml
 symbol.sml
-temp.sig
 temp.sml
 translate.sml
 tree.sml

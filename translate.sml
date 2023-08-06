@@ -522,7 +522,7 @@ struct
                     (* We need labels for the indidividual blocks so that we can jump to them from the previous block.
                        However, we don't need that for the first one. And the last one should just jump to the end label. *)
                     val caseLabels = map (fn _ => Temp.newLabel ()) branches
-                    val caseLabels' = List.concat [List.tl caseLabels, [endLabel]]
+                    val caseLabels' = (List.tl caseLabels) @ [endLabel]
 
                     fun translateCaseBlock (label, AST.Case { region = _, values = values, body = body }, nextCaseBlockLabel) =
                       let
@@ -542,22 +542,22 @@ struct
                           end
 
                       in
-                        Tree.SEQ (List.concat [
-                           [Tree.LABEL label],
-                           map caseValue values,
-                           [Tree.LABEL bodyLabel],
+                        Tree.SEQ (
+                           [Tree.LABEL label] @
+                           (map caseValue values) @
+                           [Tree.LABEL bodyLabel] @
                            [bodyTree]
-                        ])
+                        )
                       end
 
                   in
-                    (Tree.SEQ (List.concat [
+                    (Tree.SEQ (
                        (* Assign value to temp so that we don't compute it over and over.
                           There's probably potential here for skipping the temp for certain expressions. *)
-                       [Tree.MOVE (temp, valTree)],
-                       Utils.zip3 translateCaseBlock caseLabels branches caseLabels',
+                       [Tree.MOVE (temp, valTree)] @
+                       (Utils.zip3 translateCaseBlock caseLabels branches caseLabels') @
                        [Tree.LABEL endLabel]
-                     ]),
+                     ),
                      venv)
                   end
               | translateStmt venv (AST.Variable d) =

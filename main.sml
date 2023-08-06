@@ -17,8 +17,20 @@ struct
       fun pprintFragments [] = []
         | pprintFragments (f::rest) = List.concat [pprint f, [PPrint.Newline, PPrint.Newline], pprintFragments rest]
 
+      fun canonicalizeFragment (Translate.PROC { label = label, body = body, epiloque = epiloque, returnValue = returnValue, frame = frame }) =
+            let
+              val linearizedBody = CFlow.linearize body
+              val (startLabel, basicBlockTable) = CFlow.basicBlocks linearizedBody
+            in
+              Translate.PROC { label = label, body = Tree.SEQ linearizedBody, epiloque = epiloque, returnValue = returnValue, frame = frame }
+            end
+        | canonicalizeFragment f = f
+
+      val canonicalFragments = map canonicalizeFragment fragments
+
     in
-      Utils.writeToFile ("program.flux.tree", fn stream => PPrint.print stream (pprintFragments fragments))
+      Utils.writeToFile ("program.flux.tree", fn stream => PPrint.print stream (pprintFragments fragments));
+      Utils.writeToFile ("program.flux.tree.canon", fn stream => PPrint.print stream (pprintFragments canonicalFragments))
     end
 
 end
