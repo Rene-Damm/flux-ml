@@ -60,7 +60,7 @@ struct
                  Put the statement sequence back in the correct order by reversing it. *)
               val block = BasicBlock { label = l, body = List.rev b, exits = e }
             in
-              Symbol.enter (mapOfBlocks, getBasicBlockLabel block, block)
+              Symbol.enter (mapOfBlocks, l, block)
             end
         | endBlock NONE mapOfBlocks = mapOfBlocks
 
@@ -83,6 +83,39 @@ struct
 
     in
       (startLabel, process NONE Symbol.emptyTable ((Tree.LABEL startLabel)::stmts))
+    end
+
+  (* Perform a simple version of trace scheduling. Returns a linear list of statements in the order arrived at by the scheduler. *)
+  fun traceSchedule (startLabel, basicBlockTable) =
+    let
+
+      fun traceAll label blockTable =
+        let
+          val (block as BasicBlock { label = _, body = body, exits = exits }) = Symbol.find (blockTable, label)
+
+          fun newTrace () =
+            let
+              val (newLabel, _) = List.hd (Symbol.all blockTable)
+              val remainingBlocks = Symbol.remove (blockTable, newLabel)
+            in
+              traceAll newLabel remainingBlocks
+            end
+        in
+          case exits
+            of [] => if (Symbol.numItems blockTable) = 0
+                     then [block] (* Have traced everything. *)
+                     else block::(newTrace ())
+             | jmpLabel::[] => raise Utils.NotImplemented
+             | trueLabel::falseLabel::[] => raise Utils.NotImplemented
+             | _ => raise Utils.ShouldNotGetHere
+        end
+
+      fun listStatements ((BasicBlock { label = _, body = stmts, exits = _ })::rest) = stmts @ (listStatements rest)
+        | listStatements [] = []
+
+    in
+      List.app (fn (s, _) => Utils.println ("bblock: " ^ (Temp.labelToString s))) (Symbol.all basicBlockTable);
+      listStatements (traceAll startLabel basicBlockTable)
     end
 
 end

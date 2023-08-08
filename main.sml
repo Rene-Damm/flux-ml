@@ -20,17 +20,27 @@ struct
       fun canonicalizeFragment (Translate.PROC { label = label, body = body, epiloque = epiloque, returnValue = returnValue, frame = frame }) =
             let
               val linearizedBody = CFlow.linearize body
-              val (startLabel, basicBlockTable) = CFlow.basicBlocks linearizedBody
             in
               Translate.PROC { label = label, body = Tree.SEQ linearizedBody, epiloque = epiloque, returnValue = returnValue, frame = frame }
             end
         | canonicalizeFragment f = f
 
+      fun scheduleFragment (Translate.PROC { label = label, body = body, epiloque = epiloque, returnValue = returnValue, frame = frame }) =
+            let
+              val (startLabel, basicBlockTable) = case body of Tree.SEQ stmts => CFlow.basicBlocks stmts | _ => raise Utils.ShouldNotGetHere
+              val scheduledStmts = CFlow.traceSchedule (startLabel, basicBlockTable)
+            in
+              Translate.PROC { label = label, body = Tree.SEQ scheduledStmts, epiloque = epiloque, returnValue = returnValue, frame = frame }
+            end
+        | scheduleFragment f = f
+
       val canonicalFragments = map canonicalizeFragment fragments
+      val scheduledFragments = map scheduleFragment canonicalFragments
 
     in
       Utils.writeToFile ("program.flux.tree", fn stream => PPrint.print stream (pprintFragments fragments));
-      Utils.writeToFile ("program.flux.tree.canon", fn stream => PPrint.print stream (pprintFragments canonicalFragments))
+      Utils.writeToFile ("program.flux.tree.1canon", fn stream => PPrint.print stream (pprintFragments canonicalFragments));
+      Utils.writeToFile ("program.flux.tree.2schedule", fn stream => PPrint.print stream (pprintFragments scheduledFragments))
     end
 
 end
