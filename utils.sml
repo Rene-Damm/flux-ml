@@ -39,5 +39,13 @@ struct
     | zipFold _ c [] _ = c
     | zipFold _ c _ [] = c
 
+  fun takeItem func (a::[]) = if func a then (a, []) else raise List.Empty
+    | takeItem func (a::rest) = if func a then (a, rest) else let val (item, lst) = takeItem func rest in (item, a::lst) end
+    | takeItem _ [] = raise List.Empty
+
+  fun maybeTakeItem func (a::[]) = if func a then (SOME a, []) else (NONE, [a])
+    | maybeTakeItem func (a::rest) = if func a then (SOME a, rest) else let val (item, lst) = maybeTakeItem func rest in (item, a::lst) end
+    | maybeTakeItem _ [] = (NONE, [])
+
 end
 

@@ -1,0 +1,192 @@
+PROC ._mod10[
+  body=[
+    [
+      LABEL label50;
+      NOP    ]
+      ];
+  retVal=temp20]
+
+PROC ._minus7[
+  body=[
+    [
+      LABEL label51;
+      NOP    ]
+      ];
+  retVal=temp21]
+
+PROC ._div9[
+  body=[
+    [
+      LABEL label52;
+      NOP    ]
+      ];
+  retVal=temp22]
+
+PROC ._plus4[
+  body=[
+    [
+      LABEL label53;
+      NOP    ]
+      ];
+  retVal=temp23]
+
+PROC ._plus6[
+  body=[
+    [
+      LABEL label54;
+      NOP    ]
+      ];
+  retVal=temp24]
+
+PROC ._plus5[
+  body=[
+    [
+      LABEL label55;
+      NOP    ]
+      ];
+  retVal=temp25]
+
+PROC ._mul8[
+  body=[
+    [
+      LABEL label56;
+      NOP    ]
+      ];
+  retVal=temp26]
+
+PROC ._not_eq12[
+  body=[
+    [
+      LABEL label57;
+      NOP    ]
+      ];
+  retVal=temp27]
+
+PROC ._eq_eq11[
+  body=[
+    [
+      LABEL label58;
+      NOP    ]
+      ];
+  retVal=temp28]
+
+PROC .Random2[
+  body=[
+    [
+      LABEL label59;
+      NOP    ]
+      ];
+  retVal=temp29]
+
+PROC .Random3[
+  body=[
+    [
+      LABEL label60;
+      NOP    ]
+      ];
+  retVal=temp30]
+
+PROC .Main16[
+  body=[
+    [
+      LABEL label61;
+      CALL(Print1,CALL(_plus4,CALL(Hello14,NOTHING),CALL(Subject15,NOTHING)));
+      JMP Main_epilogue28;
+      LABEL Main_epilogue28    ]
+      ];
+  retVal=NONE]
+
+PROC .Subject15[
+  body=[
+    [
+      LABEL label62;
+      MOVE(temp33,CALL(_mod10,CALL(Random2,NOTHING),5));
+      MOVE(temp34,temp33);
+      JMP label31;
+      LABEL label31;
+      CJUMP(EQ,CALL(_eq_eq11,temp34,0),TRUE,label36,label32);
+      LABEL label36;
+      MOVE(temp32,string37);
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL label32;
+      CJUMP(EQ,CALL(_eq_eq11,temp34,1),TRUE,label38,label33);
+      LABEL label38;
+      MOVE(temp32,string39);
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL label33;
+      CJUMP(EQ,CALL(_eq_eq11,temp34,2),TRUE,label40,label34);
+      LABEL label40;
+      MOVE(temp32,string41);
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL label34;
+      CJUMP(EQ,CALL(_eq_eq11,temp34,3),TRUE,label42,label35);
+      LABEL label42;
+      MOVE(temp32,string43);
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL label35;
+      CJUMP(EQ,CALL(_eq_eq11,temp34,4),TRUE,label44,label30);
+      LABEL label44;
+      MOVE(temp32,string45);
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL label30;
+      JMP Subject_epilogue29;
+      LABEL Subject_epilogue29;
+      LABEL label44;
+      MOVE(temp32,string45);
+      JMP Subject_epilogue29    ]
+      ];
+  retVal=temp32]
+
+PROC .Default13[
+  body=[
+    [
+      LABEL label63;
+      NOP    ]
+      ];
+  retVal=temp35]
+
+PROC .Hello14[
+  body=[
+    [
+      LABEL label64;
+      MOVE(temp36,string48);
+      JMP Hello_epilogue47;
+      LABEL Hello_epilogue47    ]
+      ];
+  retVal=temp36]
+
+PROC .Print1[
+  body=[
+    [
+      LABEL label65;
+      NOP    ]
+      ];
+  retVal=NONE]
+
+STRING .string41 " Afterlife!"
+
+STRING .string45 " Unknown!"
+
+STRING .string37 " World!"
+
+STRING .string48 "Hello"
+
+STRING .string43 " and Goodbye!"
+
+STRING .string39 " Joe!"
+

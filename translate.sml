@@ -577,12 +577,13 @@ struct
                          | SOME (AST.Expression e) =>
                             let
                               val (v, t) = translateExpr venv e
+                              val tree = Tree.MOVE (Tree.TEMP temp, v)
                             in
                               case defType
-                                of NONE => (Tree.EXPR v, t)
+                                of NONE => (tree, t)
                                  | SOME ty => if not (Types.isSubtype (ty, t))
                                               then raise Argh ("mismatch in init expr for local var")
-                                              else (Tree.EXPR v, ty)
+                                              else (tree, ty)
                             end
                          | SOME (AST.Statement l) => raise Utils.NotImplemented
 

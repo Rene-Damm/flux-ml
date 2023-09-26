@@ -3,6 +3,8 @@ struct
 
   fun run() =
     let
+      val _ = Temp.reset ()
+
       val ast = Parse.parse "program.flux"
       val _ = Utils.writeToFile ("program.flux.ast", fn stream => AST.print stream ast)
       val fragments = Translate.translateProgram ast

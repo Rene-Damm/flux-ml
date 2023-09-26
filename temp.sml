@@ -12,6 +12,8 @@ sig
   val tempToString : temp -> string
   val labelToString : label -> string
 
+  val reset : unit -> unit
+
 end
 
 structure Temp : TEMP =
@@ -56,6 +58,8 @@ struct
 
   fun labelToString label = Symbol.toString label
   fun tempToString temp = Symbol.toString temp
+
+  fun reset () = (numTemps := 0; numLabels := 0)
 
 end
 

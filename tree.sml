@@ -9,7 +9,7 @@ struct
                 | TEMP of Temp.temp
                 | BINOP of binop * expr * expr
                 | MEM of expr
-                | CALL of Temp.label * expr list
+                | CALL of Temp.label * expr list (* No temps used for return values. *)
 
        and stmt = MOVE of expr * expr
                 | EXPR of expr
@@ -22,6 +22,10 @@ struct
        and binop = PLUS | MINUS | MUL | DIV | MOD | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
 
        and relop = EQ | NE | LT | GT | LE | GE
+
+  fun isJump (JUMP _) = true
+    | isJump (CJUMP (_, _, _, _, _)) = true
+    | isJump _ = false
 
   fun pprint tree = 
     let

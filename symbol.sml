@@ -51,14 +51,9 @@ struct
     AtomBinaryMap.find (table, symbol)
 
   fun find (table, symbol) =
-    case List.find (fn (s, _) => (Utils.println ("want: " ^ (toString s)); Utils.println ("got: " ^ (toString s)); String.compare(toString s, toString symbol) = EQUAL)) (AtomBinaryMap.listItemsi table)
-      of SOME (_, v) => v
-       | NONE => (Utils.println (toString symbol); raise SymbolNotFound symbol)
-       (*
     case lookup (table, symbol)
       of SOME value => value
        | NONE => (Utils.println (toString symbol); raise SymbolNotFound symbol)
-       *)
 
   fun all table = AtomBinaryMap.listItemsi table
   fun entries table = AtomBinaryMap.listItems table

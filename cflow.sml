@@ -1,3 +1,11 @@
+structure StringOrd =
+struct
+  type ord_key = string
+  val compare = String.compare
+end
+
+structure StringMap = RedBlackMapFn(StringOrd)
+
 structure CFlow =
 struct
 
@@ -54,68 +62,80 @@ struct
       val cleanedStmts = removeRedundantLabels stmts stmts
       val cleanedStmts' = removeUnusedLabels cleanedStmts cleanedStmts
 
-      fun endBlock (SOME (BasicBlock { label = l, body = b, exits = e })) mapOfBlocks =
+      fun endBlock (SOME (BasicBlock { label = l, body = b, exits = e })) blockList =
             let
               (* We prepend rather than append to the statement lists while putting together a basic block.
                  Put the statement sequence back in the correct order by reversing it. *)
               val block = BasicBlock { label = l, body = List.rev b, exits = e }
             in
-              Symbol.enter (mapOfBlocks, l, block)
+              block::blockList
             end
-        | endBlock NONE mapOfBlocks = mapOfBlocks
+        | endBlock NONE blockList = blockList
 
       (* Creates a dictionary of basic blocks for given sequence of statements. *)
-      fun process current mapOfBlocks ((stmt as Tree.LABEL l)::rest) =
+      fun process current blockList ((stmt as Tree.LABEL l)::rest) =
             (* LABEL starts new block. *)
-            process (SOME (BasicBlock { label = l, body = [stmt], exits = [] })) (endBlock current mapOfBlocks) rest
-        | process (SOME (BasicBlock { label = blockLabel, body = b, exits = _ })) mapOfBlocks ((stmt as Tree.JUMP exitLabel)::rest) =
+            let
+              val current' = case current
+                               of (SOME (BasicBlock { label = label, body = s::restBody, exits = exits })) =>
+                                    if Tree.isJump s then (SOME (BasicBlock { label = label, body = s::restBody, exits = exits }))
+                                    else (SOME (BasicBlock { label = label, body = (Tree.JUMP l)::s::restBody, exits = l::exits }))
+                                | _ => current
+            in
+              process (SOME (BasicBlock { label = l, body = [stmt], exits = [] })) (endBlock current' blockList) rest
+            end
+        | process (SOME (BasicBlock { label = blockLabel, body = b, exits = _ })) blockList ((stmt as Tree.JUMP exitLabel)::rest) =
             (* JUMP ends current block. *)
-            process NONE (endBlock (SOME (BasicBlock { label = blockLabel, body = stmt::b, exits = [exitLabel] })) mapOfBlocks) rest
-        | process (SOME (BasicBlock { label = l, body = b, exits = _ })) mapOfBlocks ((stmt as Tree.CJUMP (operator, left, right, trueBranch, falseBranch))::rest) =
+            process NONE (endBlock (SOME (BasicBlock { label = blockLabel, body = stmt::b, exits = [exitLabel] })) blockList) rest
+        | process (SOME (BasicBlock { label = l, body = b, exits = _ })) blockList ((stmt as Tree.CJUMP (operator, left, right, trueBranch, falseBranch))::rest) =
             (* CJUMP ends current block. *)
-            process NONE (endBlock (SOME (BasicBlock { label = l, body = stmt::b, exits = [trueBranch, falseBranch] })) mapOfBlocks) rest
-        | process (SOME (BasicBlock { label = l, body = b, exits = _ })) mapOfBlocks (s::rest) =
-            process (SOME (BasicBlock { label = l, body = s::b, exits = [] })) mapOfBlocks rest
-        | process current mapOfBlocks [] = endBlock current mapOfBlocks
+            process NONE (endBlock (SOME (BasicBlock { label = l, body = stmt::b, exits = [trueBranch, falseBranch] })) blockList) rest
+        | process (SOME (BasicBlock { label = l, body = b, exits = _ })) blockList (s::rest) =
+            (* Add statement to current block. *)
+            process (SOME (BasicBlock { label = l, body = s::b, exits = [] })) blockList rest
+        | process current blockList [] = endBlock current blockList
         | process _ _ s = (PPrint.print TextIO.stdOut [Tree.pprint (Tree.SEQ s)]; raise Utils.ShouldNotGetHere)
 
       val startLabel = Temp.newLabel ()
 
     in
-      (startLabel, process NONE Symbol.emptyTable ((Tree.LABEL startLabel)::stmts))
+      (startLabel, process NONE [] ((Tree.LABEL startLabel)::stmts))
     end
 
   (* Perform a simple version of trace scheduling. Returns a linear list of statements in the order arrived at by the scheduler. *)
-  fun traceSchedule (startLabel, basicBlockTable) =
+  fun traceSchedule (startLabel, basicBlockList) =
     let
 
-      fun traceAll label blockTable =
-        let
-          val (block as BasicBlock { label = _, body = body, exits = exits }) = Symbol.find (blockTable, label)
+      fun traceAll label blockList =
+        case Utils.maybeTakeItem (fn (BasicBlock { label = l, body = _, exits = _ }) => Temp.isSameLabel (l, label)) blockList
+          of (SOME (block as BasicBlock { label = _, body = body, exits = exits }), restList) =>
+              let
+                fun newTrace [] = []
+                  | newTrace ((block as BasicBlock { label = l, body = _, exits = _ })::rest) = traceAll l (block::rest)
+              in
+                case exits
+                  of [] => (case restList
+                              of [] => [block] (* Have traced everything. *)
+                               | _ => block::(newTrace restList))
+                   | jmpLabel::[] => block::(traceAll jmpLabel restList)
+                   | trueLabel::falseLabel::[] =>
+                       let
+                         val trueBranchTrace = traceAll trueLabel restList
+                         val falseBranchTrace = traceAll falseLabel restList
+                      in
+                        block::(trueBranchTrace @ falseBranchTrace)
+                      end
+                   | _ => raise Utils.ShouldNotGetHere
+              end
+           | _ => [] (* We've reached a block that was already taken out in a previous trace. *)
 
-          fun newTrace () =
-            let
-              val (newLabel, _) = List.hd (Symbol.all blockTable)
-              val remainingBlocks = Symbol.remove (blockTable, newLabel)
-            in
-              traceAll newLabel remainingBlocks
-            end
-        in
-          case exits
-            of [] => if (Symbol.numItems blockTable) = 0
-                     then [block] (* Have traced everything. *)
-                     else block::(newTrace ())
-             | jmpLabel::[] => raise Utils.NotImplemented
-             | trueLabel::falseLabel::[] => raise Utils.NotImplemented
-             | _ => raise Utils.ShouldNotGetHere
-        end
+      val traceSequence = traceAll startLabel basicBlockList
 
       fun listStatements ((BasicBlock { label = _, body = stmts, exits = _ })::rest) = stmts @ (listStatements rest)
         | listStatements [] = []
 
     in
-      List.app (fn (s, _) => Utils.println ("bblock: " ^ (Temp.labelToString s))) (Symbol.all basicBlockTable);
-      listStatements (traceAll startLabel basicBlockTable)
+      listStatements traceSequence
     end
 
 end
